@@ -2,7 +2,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
-const ExcelJS = require('exceljs'); // Sử dụng exceljs để đóng khung Excel đẹp mắt
+const ExcelJS = require('exceljs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -110,10 +110,20 @@ const initDatabase = async () => {
         if (userCountRes.rows[0] && parseInt(userCountRes.rows[0].count) === 0) {
             await pool.query(`INSERT INTO users (username, password, role) VALUES ('admin', '123456', 'admin')`);
             await pool.query(`INSERT INTO users (username, password, role) VALUES ('nhanvien', '123456', 'staff')`);
-            await pool.query(`INSERT INTO settings (name, address, phone, qr_code, promo_text, promo_discount) VALUES ('Khách Sạn Biển xanh', '123 Đường Bờ Biển', '0909123456', 'https://api.vietqr.io/image/970422-123456789-n5398FP.jpg', 'Giảm giá 10% tiền phòng cho khách đặt trực tuyến!', 10)`);
+            await pool.query(`INSERT INTO settings (name, address, phone, qr_code, promo_text, promo_discount, banners) VALUES 
+                ('Khách Sạn Biển Xanh', '123 Đường Bờ Biển, Long Xuyên, An Giang', '0909123456', 
+                'https://api.vietqr.io/image/970422-123456789-n5398FP.jpg', 
+                'Giảm giá 10% tiền phòng cho khách đặt trực tuyến!', 10, 
+                '["https://images.unsplash.com/photo-1566073771259-6a8506099945", "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b"]')`);
+            
+            await pool.query(`INSERT INTO rooms (room_name, price_per_night, status) VALUES ('Phòng VIP 201', 1200000, 'Trống')`);
             await pool.query(`INSERT INTO rooms (room_name, price_per_night, status) VALUES ('Phòng 101', 500000, 'Trống')`);
             await pool.query(`INSERT INTO rooms (room_name, price_per_night, status) VALUES ('Phòng 102', 600000, 'Trống')`);
-            await pool.query(`INSERT INTO rooms (room_name, price_per_night, status) VALUES ('Phòng VIP 201', 1200000, 'Trống')`);
+            
+            await pool.query(`INSERT INTO menu (item_name, category, unit, price) VALUES ('Mì Xào Bò', 'food', 'Đĩa', 45000)`);
+            await pool.query(`INSERT INTO menu (item_name, category, unit, price) VALUES ('Nước Yến', 'drink', 'Lon', 20000)`);
+            await pool.query(`INSERT INTO menu (item_name, category, unit, price) VALUES ('Massage Thảo Dược', 'relax', 'Suất', 250000)`);
+            await pool.query(`INSERT INTO menu (item_name, category, unit, price) VALUES ('Giặt Ủi Quần Áo', 'khác', 'Bộ', 30000)`);
         }
         console.log('Khởi tạo cấu trúc CSDL hoàn tất.');
     } catch (err) {
@@ -123,7 +133,7 @@ const initDatabase = async () => {
 
 initDatabase();
 
-// --- API Users ---
+// --- API Auth & Users ---
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -131,48 +141,34 @@ app.post('/api/login', async (req, res) => {
         const row = result.rows[0];
         if (!row) return res.status(401).json({ error: 'Sai tài khoản hoặc mật khẩu!' });
         res.json({ success: true, user: { username: row.username, role: row.role } });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/users', async (req, res) => {
     try {
         const result = await pool.query(`SELECT id, username, role FROM users`);
         res.json(result.rows || []);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/users/save', async (req, res) => {
     const { id, username, password, role } = req.body;
     try {
         if (id) {
-            if (password) {
-                await pool.query(`UPDATE users SET username = $1, password = $2, role = $3 WHERE id = $4`, [username, password, role, id]);
-            } else {
-                await pool.query(`UPDATE users SET username = $1, role = $2 WHERE id = $3`, [username, role, id]);
-            }
+            if (password) await pool.query(`UPDATE users SET username = $1, password = $2, role = $3 WHERE id = $4`, [username, password, role, id]);
+            else await pool.query(`UPDATE users SET username = $1, role = $2 WHERE id = $3`, [username, role, id]);
         } else {
             await pool.query(`INSERT INTO users (username, password, role) VALUES ($1, $2, $3)`, [username, password || '123456', role || 'staff']);
         }
         res.json({ success: true });
-    } catch (err) {
-        res.status(400).json({ error: 'Tên tài khoản đã tồn tại hoặc có lỗi xảy ra!' });
-    }
+    } catch (err) { res.status(400).json({ error: 'Lỗi tạo/sửa tài khoản!' }); }
 });
 
 app.delete('/api/users/:id', async (req, res) => {
     try {
-        const userRes = await pool.query(`SELECT username FROM users WHERE id = $1`, [req.params.id]);
-        const row = userRes.rows[0];
-        if (row && row.username === 'admin') return res.status(400).json({ error: 'Không thể xóa tài khoản admin gốc!' });
-        await pool.query(`DELETE FROM users WHERE id = $1`, [req.params.id]);
+        await pool.query(`DELETE FROM users WHERE id = $1 AND username != 'admin'`, [req.params.id]);
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // --- API Settings ---
@@ -180,9 +176,7 @@ app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query(`SELECT * FROM settings LIMIT 1`);
         res.json(result.rows[0] || {});
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/settings', async (req, res) => {
@@ -191,47 +185,36 @@ app.post('/api/settings', async (req, res) => {
         await pool.query(`UPDATE settings SET name = $1, address = $2, phone = $3, qr_code = $4, banners = $5, promo_text = $6, promo_discount = $7 WHERE id = 1`, 
             [name, address, phone, qr_code, JSON.stringify(banners || []), promo_text || '', promo_discount || 0]);
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // --- API Rooms ---
 app.get('/api/rooms', async (req, res) => {
     try {
-        const result = await pool.query(`SELECT * FROM rooms`);
+        const result = await pool.query(`SELECT * FROM rooms ORDER BY id ASC`);
         const updatedRows = (result.rows || []).map(r => {
             try { r.booking_dates_arr = JSON.parse(r.booking_dates || '[]'); } catch(e) { r.booking_dates_arr = []; }
             r.nights = r.booking_dates_arr.length > 0 ? r.booking_dates_arr.length : 1;
             return r;
         });
         res.json(updatedRows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/rooms/save', async (req, res) => {
     const { id, room_name, price_per_night } = req.body;
     try {
-        if (id) {
-            await pool.query(`UPDATE rooms SET room_name = $1, price_per_night = $2 WHERE id = $3`, [room_name, price_per_night, id]);
-        } else {
-            await pool.query(`INSERT INTO rooms (room_name, price_per_night, status) VALUES ($1, $2, 'Trống')`, [room_name, price_per_night]);
-        }
+        if (id) await pool.query(`UPDATE rooms SET room_name = $1, price_per_night = $2 WHERE id = $3`, [room_name, price_per_night, id]);
+        else await pool.query(`INSERT INTO rooms (room_name, price_per_night, status) VALUES ($1, $2, 'Trống')`, [room_name, price_per_night]);
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/api/rooms/:id', async (req, res) => {
     try {
         await pool.query(`DELETE FROM rooms WHERE id = $1`, [req.params.id]);
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/rooms/book', async (req, res) => {
@@ -243,9 +226,7 @@ app.post('/api/rooms/book', async (req, res) => {
         await pool.query(`UPDATE rooms SET status = 'Đang có khách', booking_type = $1, customer_name = $2, customer_phone = $3, booking_dates = $4, payment_status = $5, payment_method = $6, start_date = $7 WHERE id = $8`, 
             [booking_type || 'counter', customer_name || 'Khách lẻ', customer_phone || '', JSON.stringify(datesArr), payment_status || 'Chưa thanh toán', payment_method || 'tiền mặt', datesArr[0], room_id]);
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/rooms/update-status', async (req, res) => {
@@ -253,19 +234,15 @@ app.post('/api/rooms/update-status', async (req, res) => {
     try {
         await pool.query(`UPDATE rooms SET payment_status = $1, payment_method = $2 WHERE id = $3`, [payment_status, payment_method, room_id]);
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/rooms/cancel-booking', async (req, res) => {
     const { room_id } = req.body;
     try {
         await pool.query(`UPDATE rooms SET status = 'Trống', booking_type = NULL, customer_name = NULL, customer_phone = NULL, payment_status = 'Chưa thanh toán', payment_method = NULL, start_date = NULL, booking_dates = '[]' WHERE id = $1`, [room_id]);
-        res.json({ success: true, message: 'Đã hủy đặt phòng thành công!' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/rooms/checkout', async (req, res) => {
@@ -284,7 +261,6 @@ app.post('/api/rooms/checkout', async (req, res) => {
         const nights = Math.max(1, datesArr.length);
         const roomTotal = nights * room.price_per_night;
 
-        // Nếu khách đã thanh toán tiền phòng trước (online chuyển khoản), thì tiền phòng quy về 0 trong bill thanh toán lúc checkout
         const isAlreadyPaidRoom = room.payment_status === 'Đã thanh toán' && room.payment_method === 'chuyen_khoan';
         const paidRoomAmount = isAlreadyPaidRoom ? roomTotal : 0;
 
@@ -293,10 +269,10 @@ app.post('/api/rooms/checkout', async (req, res) => {
 
         const foodItems = orderItems.filter(i => i.category === 'food');
         const drinkItems = orderItems.filter(i => i.category === 'drink');
+        const relaxItems = orderItems.filter(i => i.category === 'relax');
         const otherItems = orderItems.filter(i => i.category === 'khác');
 
         const serviceTotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
-        // Tổng thanh toán tại quầy checkout gồm dịch vụ phát sinh + tiền phòng (nếu chưa trả)
         const grandTotal = (isAlreadyPaidRoom ? 0 : roomTotal) + serviceTotal;
 
         const totalImportCost = orderItems.reduce((sum, item) => sum + (item.import_price * item.quantity), 0);
@@ -324,161 +300,21 @@ app.post('/api/rooms/checkout', async (req, res) => {
                 paidRoomAmount: paidRoomAmount.toFixed(0),
                 foodItems,
                 drinkItems,
+                relaxItems,
                 otherItems,
                 serviceTotal: serviceTotal.toFixed(0),
                 grandTotal: grandTotal.toFixed(0)
             }
         });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- API Reports & Multi-Sheet Excel Export ---
-app.get('/api/reports/revenue', async (req, res) => {
-    const { start_date, end_date } = req.query;
-    try {
-        let billQuery = `SELECT SUM(grand_total) as totalRevenue, SUM(paid_room_amount) as totalPaidRoom FROM bills`;
-        let expQuery = `SELECT category, SUM(amount) as totalExp FROM expenses`;
-        let params = [];
-
-        if (start_date && end_date) {
-            billQuery += ` WHERE created_date BETWEEN $1 AND $2`;
-            expQuery += ` WHERE date BETWEEN $1 AND $2`;
-            params = [start_date, end_date];
-        }
-        expQuery += ` GROUP BY category`;
-
-        const billRes = await pool.query(billQuery, params);
-        const invRes = await pool.query(`SELECT SUM(quantity * import_price) as totalInventoryValue FROM inventory`);
-        const expRes = await pool.query(expQuery, params);
-
-        const totalRevenue = Number(billRes.rows[0]?.totalrevenue || 0) + Number(billRes.rows[0]?.totalpaidroom || 0);
-        const totalImport = invRes.rows[0]?.totalinventoryvalue || 0;
-        const grossProfit = totalRevenue - totalImport;
-
-        let expenses = { 'Lương': 0, 'Điện': 0, 'Nước': 0, 'Thiết bị': 0, 'Mặt bằng': 0, 'Khác': 0 };
-        let totalExpense = 0;
-        (expRes.rows || []).forEach(e => {
-            expenses[e.category] = Number(e.totalexp) || 0;
-            totalExpense += Number(e.totalexp) || 0;
-        });
-
-        const netProfit = grossProfit - totalExpense;
-        res.json({ totalRevenue, totalImport, grossProfit, expenses, totalExpense, netProfit });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/reports/bills-detail', async (req, res) => {
-    const { start_date, end_date } = req.query;
-    try {
-        let query = `SELECT * FROM bills`;
-        let params = [];
-        if (start_date && end_date) {
-            query += ` WHERE created_date BETWEEN $1 AND $2`;
-            params = [start_date, end_date];
-        }
-        query += ` ORDER BY id DESC`;
-        const result = await pool.query(query, params);
-        res.json(result.rows || []);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Endpoint xuất Excel đa sheet có đóng khung (Border) cho toàn bộ ô dữ liệu
-app.get('/api/reports/export-excel', async (req, res) => {
-    const { start_date, end_date } = req.query;
-    try {
-        let billQuery = `SELECT * FROM bills`;
-        let expQuery = `SELECT * FROM expenses`;
-        let params = [];
-        if (start_date && end_date) {
-            billQuery += ` WHERE created_date BETWEEN $1 AND $2`;
-            expQuery += ` WHERE date BETWEEN $1 AND $2`;
-            params = [start_date, end_date];
-        }
-
-        const billRes = await pool.query(billQuery, params);
-        const invRes = await pool.query(`SELECT * FROM inventory`);
-        const expRes = await pool.query(expQuery, params);
-
-        const workbook = new ExcelJS.Workbook();
-        const thinBorder = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-        };
-
-        // Helper định dạng đóng khung bảng
-        const styleSheetTable = (sheet) => {
-            sheet.views = [{ showGridLines: true }];
-            sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-                row.eachCell({ includeEmpty: true }, (cell) => {
-                    cell.border = thinBorder;
-                    if (rowNumber === 1) {
-                        cell.font = { bold: true, color: { argb: 'FFFFFF' } };
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2E7D32' } };
-                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-                    }
-                });
-            });
-        };
-
-        // Sheet 1: Hóa đơn thanh toán
-        const wsBills = workbook.addWorksheet('ChiTiet_HoaDon');
-        wsBills.columns = [
-            { header: 'ID', key: 'id', width: 8 },
-            { header: 'Ngày', key: 'created_date', width: 12 },
-            { header: 'Phòng', key: 'room_name', width: 15 },
-            { header: 'Số đêm', key: 'nights', width: 8 },
-            { header: 'Tiền phòng', key: 'room_total', width: 15 },
-            { header: 'Tiền dịch vụ', key: 'service_total', width: 15 },
-            { header: 'Tổng thanh toán', key: 'grand_total', width: 18 },
-            { header: 'Thanh toán', key: 'payment_method', width: 15 }
-        ];
-        (billRes.rows || []).forEach(b => wsBills.addRow(b));
-        styleSheetTable(wsBills);
-
-        // Sheet 2: Kho hàng
-        const wsInv = workbook.addWorksheet('KhoHang_TonKho');
-        wsInv.columns = [
-            { header: 'Tên hàng', key: 'item_name', width: 25 },
-            { header: 'Danh mục', key: 'category', width: 12 },
-            { header: 'Tồn kho', key: 'quantity', width: 10 },
-            { header: 'Đơn vị', key: 'unit', width: 10 },
-            { header: 'Giá nhập', key: 'import_price', width: 15 }
-        ];
-        (invRes.rows || []).forEach(i => wsInv.addRow(i));
-        styleSheetTable(wsInv);
-
-        // Sheet 3: Chi phí
-        const wsExp = workbook.addWorksheet('ChiPhi');
-        wsExp.columns = [
-            { header: 'Ngày', key: 'date', width: 12 },
-            { header: 'Loại chi phí', key: 'category', width: 20 },
-            { header: 'Số tiền', key: 'amount', width: 15 },
-            { header: 'Ghi chú', key: 'note', width: 30 }
-        ];
-        (expRes.rows || []).forEach(e => wsExp.addRow(e));
-        styleSheetTable(wsExp);
-
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=BaoCao_KhachSan.xlsx');
-        await workbook.xlsx.write(res);
-        res.end();
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// --- API Menu & Inventory & Expenses ---
+// --- API Menu ---
 app.get('/api/menu', async (req, res) => {
-    try { const result = await pool.query(`SELECT * FROM menu`); res.json(result.rows || []); } catch (err) { res.status(500).json({ error: err.message }); }
+    try { const result = await pool.query(`SELECT * FROM menu ORDER BY id ASC`); res.json(result.rows || []); } 
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 app.post('/api/menu/save', async (req, res) => {
     const { id, item_name, category, unit, import_price, price } = req.body;
     try {
@@ -487,10 +323,13 @@ app.post('/api/menu/save', async (req, res) => {
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
 app.delete('/api/menu/:id', async (req, res) => {
-    try { await pool.query(`DELETE FROM menu WHERE id = $1`, [req.params.id]); res.json({ success: true }); } catch (err) { res.status(500).json({ error: err.message }); }
+    try { await pool.query(`DELETE FROM menu WHERE id = $1`, [req.params.id]); res.json({ success: true }); } 
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- API Inventory & Expenses & Reports ---
 app.get('/api/inventory', async (req, res) => {
     try { const result = await pool.query(`SELECT * FROM inventory`); res.json(result.rows || []); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -537,6 +376,120 @@ app.post('/api/expenses', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server đang chạy tại http://localhost:${PORT}`);
+app.get('/api/reports/revenue', async (req, res) => {
+    const { start_date, end_date } = req.query;
+    try {
+        let billQuery = `SELECT SUM(grand_total) as totalRevenue, SUM(paid_room_amount) as totalPaidRoom FROM bills`;
+        let expQuery = `SELECT category, SUM(amount) as totalExp FROM expenses`;
+        let params = [];
+
+        if (start_date && end_date) {
+            billQuery += ` WHERE created_date BETWEEN $1 AND $2`;
+            expQuery += ` WHERE date BETWEEN $1 AND $2`;
+            params = [start_date, end_date];
+        }
+        expQuery += ` GROUP BY category`;
+
+        const billRes = await pool.query(billQuery, params);
+        const invRes = await pool.query(`SELECT SUM(quantity * import_price) as totalInventoryValue FROM inventory`);
+        const expRes = await pool.query(expQuery, params);
+
+        const totalRevenue = Number(billRes.rows[0]?.totalrevenue || 0) + Number(billRes.rows[0]?.totalpaidroom || 0);
+        const totalImport = invRes.rows[0]?.totalinventoryvalue || 0;
+        const grossProfit = totalRevenue - totalImport;
+
+        let expenses = { 'Lương': 0, 'Điện': 0, 'Nước': 0, 'Thiết bị': 0, 'Mặt bằng': 0, 'Khác': 0 };
+        let totalExpense = 0;
+        (expRes.rows || []).forEach(e => {
+            expenses[e.category] = Number(e.totalexp) || 0;
+            totalExpense += Number(e.totalexp) || 0;
+        });
+
+        const netProfit = grossProfit - totalExpense;
+        res.json({ totalRevenue, totalImport, grossProfit, expenses, totalExpense, netProfit });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+app.get('/api/reports/bills-detail', async (req, res) => {
+    const { start_date, end_date } = req.query;
+    try {
+        let query = `SELECT * FROM bills`;
+        let params = [];
+        if (start_date && end_date) {
+            query += ` WHERE created_date BETWEEN $1 AND $2`;
+            params = [start_date, end_date];
+        }
+        query += ` ORDER BY id DESC`;
+        const result = await pool.query(query, params);
+        res.json(result.rows || []);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/reports/export-excel', async (req, res) => {
+    const { start_date, end_date } = req.query;
+    try {
+        let billQuery = `SELECT * FROM bills`;
+        let expQuery = `SELECT * FROM expenses`;
+        let params = [];
+        if (start_date && end_date) {
+            billQuery += ` WHERE created_date BETWEEN $1 AND $2`;
+            expQuery += ` WHERE date BETWEEN $1 AND $2`;
+            params = [start_date, end_date];
+        }
+
+        const billRes = await pool.query(billQuery, params);
+        const invRes = await pool.query(`SELECT * FROM inventory`);
+        const expRes = await pool.query(expQuery, params);
+
+        const workbook = new ExcelJS.Workbook();
+        const thinBorder = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+        const styleSheetTable = (sheet) => {
+            sheet.views = [{ showGridLines: true }];
+            sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+                row.eachCell({ includeEmpty: true }, (cell) => {
+                    cell.border = thinBorder;
+                    if (rowNumber === 1) {
+                        cell.font = { bold: true, color: { argb: 'FFFFFF' } };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2E7D32' } };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    }
+                });
+            });
+        };
+
+        const wsBills = workbook.addWorksheet('ChiTiet_HoaDon');
+        wsBills.columns = [
+            { header: 'ID', key: 'id', width: 8 }, { header: 'Ngày', key: 'created_date', width: 12 },
+            { header: 'Phòng', key: 'room_name', width: 15 }, { header: 'Số đêm', key: 'nights', width: 8 },
+            { header: 'Tiền phòng', key: 'room_total', width: 15 }, { header: 'Tiền dịch vụ', key: 'service_total', width: 15 },
+            { header: 'Tổng thanh toán', key: 'grand_total', width: 18 }, { header: 'Thanh toán', key: 'payment_method', width: 15 }
+        ];
+        (billRes.rows || []).forEach(b => wsBills.addRow(b));
+        styleSheetTable(wsBills);
+
+        const wsInv = workbook.addWorksheet('KhoHang_TonKho');
+        wsInv.columns = [
+            { header: 'Tên hàng', key: 'item_name', width: 25 }, { header: 'Danh mục', key: 'category', width: 12 },
+            { header: 'Tồn kho', key: 'quantity', width: 10 }, { header: 'Đơn vị', key: 'unit', width: 10 },
+            { header: 'Giá nhập', key: 'import_price', width: 15 }
+        ];
+        (invRes.rows || []).forEach(i => wsInv.addRow(i));
+        styleSheetTable(wsInv);
+
+        const wsExp = workbook.addWorksheet('ChiPhi');
+        wsExp.columns = [
+            { header: 'Ngày', key: 'date', width: 12 }, { header: 'Loại chi phí', key: 'category', width: 20 },
+            { header: 'Số tiền', key: 'amount', width: 15 }, { header: 'Ghi chú', key: 'note', width: 30 }
+        ];
+        (expRes.rows || []).forEach(e => wsExp.addRow(e));
+        styleSheetTable(wsExp);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=BaoCao_KhachSan.xlsx');
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.listen(PORT, () => { console.log(`Server đang chạy tại http://localhost:${PORT}`); });
