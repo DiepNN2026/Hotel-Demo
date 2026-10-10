@@ -86,6 +86,15 @@
                 <div class="row">
                     <div class="col-md-5 card p-4">
                         <h4 class="mb-3">Thêm / Sửa Món</h4>
+                        
+                        <!-- Nút đồng bộ nhanh từ kho hàng -->
+                        <div class="mb-3 p-2 bg-light border rounded">
+                            <label class="form-label fw-bold text-primary small">⚡ Chọn nhanh từ Kho Hàng:</label>
+                            <select id="select-from-inventory" class="form-select form-select-sm" onchange="fillServiceFromInventory()">
+                                <option value="">-- Chọn hàng từ kho để điền nhanh --</option>
+                            </select>
+                        </div>
+
                         <input type="hidden" id="m-id">
                         <div class="mb-3"><label>Tên món:</label><input type="text" id="m-name" class="form-control"></div>
                         <div class="mb-3"><label>Danh mục:</label>
@@ -259,6 +268,7 @@
         let cachedInventory = [];
         let cachedExpenses = [];
         let cachedBills = [];
+        let cachedInventoryForMenu = [];
 
         function checkStaffRole() {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -297,6 +307,18 @@
                 </tr>
             `).join('');
 
+            // Tải dữ liệu kho hàng trước để liên kết sang thực đơn
+            const iRes = await fetch('/api/inventory');
+            cachedInventory = await iRes.json();
+            cachedInventoryForMenu = cachedInventory;
+            
+            // Đổ dữ liệu vào ô chọn nhanh từ kho hàng
+            const selectEl = document.getElementById('select-from-inventory');
+            if(selectEl) {
+                selectEl.innerHTML = `<option value="">-- Chọn hàng từ kho để điền nhanh --</option>` + 
+                    cachedInventoryForMenu.map(i => `<option value="${i.id}">${i.item_name} (${i.unit}) - Tồn: ${i.quantity}</option>`).join('');
+            }
+
             const mRes = await fetch('/api/menu');
             const menu = await mRes.json();
             document.getElementById('menu-table').innerHTML = menu.map(m => `
@@ -312,8 +334,6 @@
                 </tr>
             `).join('');
 
-            const iRes = await fetch('/api/inventory');
-            cachedInventory = await iRes.json();
             let totalInvVal = 0;
             document.getElementById('inventory-table').innerHTML = cachedInventory.map(i => {
                 const totalItemVal = i.quantity * i.import_price;
@@ -357,6 +377,18 @@
             }
 
             loadReport();
+        }
+
+        // Tự động điền dữ liệu từ kho hàng vào form thực đơn khi chọn
+        function fillServiceFromInventory() {
+            const id = document.getElementById('select-from-inventory').value;
+            if(!id) return;
+            const item = cachedInventoryForMenu.find(i => i.id == id);
+            if(item) {
+                document.getElementById('m-name').value = item.item_name || '';
+                document.getElementById('m-cat').value = item.category || 'food';
+                document.getElementById('m-unit').value = item.unit || '';
+            }
         }
 
         async function loadReport() {
@@ -463,6 +495,7 @@
             document.getElementById('m-unit').value = '';
             document.getElementById('m-price').value = '';
             document.getElementById('m-cancel').style.display = 'none';
+            document.getElementById('select-from-inventory').value = '';
         }
         async function deleteMenu(id) { if(confirm('Xóa món này?')) { await fetch(`/api/menu/${id}`, { method: 'DELETE' }); loadAll(); } }
 
