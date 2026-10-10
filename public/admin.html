@@ -15,14 +15,14 @@
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-dark px-4">
         <a class="navbar-brand fw-bold" href="index.html">⬅ Về Trang Chủ</a>
-        <span class="text-white" id="admin-header-title">Khu Vực Quản Trị Khách Sạn</span>
+        <span class="text-white" id="admin-header-title">Khu Vực Quản Trị (Admin)</span>
     </nav>
 
     <div class="container my-4">
         <ul class="nav nav-tabs mb-4" role="tablist" id="admin-tabs">
             <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#settings-tab">Cài Đặt</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#rooms-tab">Quản Lý Phòng</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#menu-tab">Dịch Vụ & Giá</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#menu-tab">Thực Đơn & Giá</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#inventory-tab">Kho Hàng</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#expenses-tab">Chi Phí</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#report-tab">Báo Cáo Doanh Thu</button></li>
@@ -81,13 +81,13 @@
                 </div>
             </div>
 
-            <!-- Dịch vụ (Thêm chọn nhanh từ Kho Hàng) -->
+            <!-- Thực đơn & Giá -->
             <div class="tab-pane fade" id="menu-tab">
                 <div class="row">
                     <div class="col-md-5 card p-4">
-                        <h4 class="mb-3">Thêm / Sửa Dịch Vụ</h4>
+                        <h4 class="mb-3">Thêm / Sửa Món</h4>
                         
-                        <!-- Ô chọn nhanh từ kho hàng -->
+                        <!-- Chọn nhanh từ kho hàng -->
                         <div class="mb-3 p-2 bg-light border rounded">
                             <label class="form-label fw-bold text-primary small">⚡ Chọn nhanh từ Kho Hàng:</label>
                             <select id="select-from-inventory" class="form-select form-select-sm" onchange="fillServiceFromInventory()">
@@ -96,7 +96,7 @@
                         </div>
 
                         <input type="hidden" id="m-id">
-                        <div class="mb-3"><label>Tên dịch vụ:</label><input type="text" id="m-name" class="form-control"></div>
+                        <div class="mb-3"><label>Tên món:</label><input type="text" id="m-name" class="form-control"></div>
                         <div class="mb-3"><label>Danh mục:</label>
                             <select id="m-cat" class="form-select">
                                 <option value="food">food (Đồ ăn)</option>
@@ -105,14 +105,14 @@
                                 <option value="khác">khác (Khác)</option>
                             </select>
                         </div>
-                        <div class="mb-3"><label>Đơn vị:</label><input type="text" id="m-unit" class="form-control" placeholder="chai, suất, đĩa..."></div>
+                        <div class="mb-3"><label>Đơn vị:</label><input type="text" id="m-unit" class="form-control" placeholder="đĩa, lon..."></div>
                         <div class="mb-3"><label>Giá Bán (VNĐ):</label><input type="number" id="m-price" class="form-control"></div>
                         <button class="btn btn-success" onclick="saveMenu()">Lưu Lại</button>
                         <button class="btn btn-secondary ms-2" onclick="resetMenuForm()" style="display:none;" id="m-cancel">Hủy</button>
                     </div>
                     <div class="col-md-7">
-                        <table class="table table-bordered bg-white">
-                            <thead><tr><th>Tên Dịch Vụ</th><th>Danh mục</th><th>Đơn vị</th><th>Giá Bán</th><th>Thao tác</th></tr></thead>
+                        <table class="table table-bordered bg-white align-middle">
+                            <thead><tr><th>Tên Món</th><th>Danh mục</th><th>Đơn vị</th><th>Giá Bán</th><th>Thao tác</th></tr></thead>
                             <tbody id="menu-table"></tbody>
                         </table>
                     </div>
@@ -313,10 +313,10 @@
                     <td>${m.item_name}</td>
                     <td>${m.category}</td>
                     <td>${m.unit}</td>
-                    <td>${m.price.toLocaleString()}đ</td>
+                    <td>${Number(m.price).toLocaleString()}đ</td>
                     <td>
-                        <button class="btn btn-sm btn-warning me-1" onclick='editMenu(${JSON.stringify(m)})'>Sửa</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteMenu(${m.id})">Xóa</button>
+                        <button class="btn btn-sm btn-warning text-white me-1" onclick='editMenu(${JSON.stringify(m)})'>Sửa</button>
+                        <button class="btn btn-sm btn-danger text-white" onclick="deleteMenu(${m.id})">Xóa</button>
                     </td>
                 </tr>
             `).join('');
@@ -325,7 +325,6 @@
             cachedInventory = await iRes.json();
             cachedInventoryForMenu = cachedInventory;
             
-            // Cập nhật dropdown chọn nhanh từ kho hàng vào form dịch vụ
             const selectEl = document.getElementById('select-from-inventory');
             if(selectEl) {
                 selectEl.innerHTML = `<option value="">-- Chọn hàng từ kho để điền nhanh --</option>` + 
@@ -374,7 +373,6 @@
             loadReport();
         }
 
-        // Hàm điền nhanh thông tin từ kho vào form dịch vụ
         function fillServiceFromInventory() {
             const id = document.getElementById('select-from-inventory').value;
             if(!id) return;
@@ -473,7 +471,7 @@
                     price: document.getElementById('m-price').value
                 })
             });
-            alert('Lưu dịch vụ thành công!'); resetMenuForm(); loadAll();
+            alert('Lưu món thành công!'); resetMenuForm(); loadAll();
         }
         function editMenu(m) {
             document.getElementById('m-id').value = m.id;
@@ -492,7 +490,7 @@
             document.getElementById('m-cancel').style.display = 'none';
             document.getElementById('select-from-inventory').value = '';
         }
-        async function deleteMenu(id) { if(confirm('Xóa dịch vụ này?')) { await fetch(`/api/menu/${id}`, { method: 'DELETE' }); loadAll(); } }
+        async function deleteMenu(id) { if(confirm('Xóa món này?')) { await fetch(`/api/menu/${id}`, { method: 'DELETE' }); loadAll(); } }
 
         async function saveInventory() {
             await fetch('/api/inventory/save', {
