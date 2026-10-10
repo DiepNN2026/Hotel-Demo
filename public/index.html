@@ -27,7 +27,6 @@
             </button>
             <div class="collapse navbar-collapse justify-content-between" id="navbarNav">
                 <ul class="navbar-nav mb-2 mb-lg-0">
-                    <!-- Menu Danh Sách Phòng với Dropdown 3 tùy chọn -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle active" href="#" id="navbarDropdownRooms" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Danh Sách Phòng
@@ -49,7 +48,7 @@
         </div>
     </nav>
 
-    <!-- Banner Carousel tự động chạy mỗi 5 giây -->
+    <!-- Banner Carousel -->
     <div class="container my-3" id="banner-section" style="display:none;">
         <div id="promo-alert-banner" class="alert alert-warning text-center fw-bold shadow-sm mb-3" style="display:none;"></div>
         <div id="carouselBanners" class="carousel slide shadow-sm" data-bs-ride="carousel" data-bs-interval="5000">
@@ -63,7 +62,7 @@
         </div>
     </div>
 
-    <!-- Tab 1: Sơ đồ / Danh sách phòng theo bộ lọc -->
+    <!-- Tab 1: Sơ đồ phòng -->
     <div class="container my-4" id="tab-rooms">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3 id="facility-title" class="fw-bold">Sơ Đồ Phòng Khách Sạn</h3>
@@ -73,7 +72,6 @@
             </div>
         </div>
         
-        <!-- Thông báo Full phòng nếu tất cả phòng đều đang có khách -->
         <div id="full-room-alert" class="alert alert-danger text-center fw-bold fs-5 shadow-sm mb-3" style="display:none;">
             ⚠️ Thông báo: Tất cả các phòng hiện tại đã đầy (Full phòng)!
         </div>
@@ -112,7 +110,7 @@
         </div>
     </div>
 
-    <!-- Modal Đặt Phòng -->
+    <!-- Modal Đặt Phòng (Chỉ dành cho Nhân viên/Admin hoặc form đặt trực tuyến nếu có) -->
     <div class="modal fade" id="bookModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -155,7 +153,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-success w-100" onclick="confirmBooking()">Xác Nhận Đặt Phòng</button></div>
+                <div class="modal-footer staff-only-action"><button class="btn btn-success w-100" onclick="confirmBooking()">Xác Nhận Đặt Phòng</button></div>
             </div>
         </div>
     </div>
@@ -172,7 +170,8 @@
                     <input type="hidden" id="a-room-id">
                     <p><strong>Khách:</strong> <span id="a-customer"></span> | <strong>Số đêm:</strong> <span id="a-nights"></span> đêm | <strong>Thanh toán tiền phòng:</strong> <span id="a-payment-status" class="badge bg-warning"></span> (<span id="a-payment-method"></span>)</p>
                     
-                    <div class="card p-3 bg-light mb-3">
+                    <!-- Cập nhật trạng thái: Chỉ Nhân viên / Quản trị -->
+                    <div class="card p-3 bg-light mb-3 staff-only-action" style="display:none;">
                         <h6 class="fw-bold">Cập nhật trạng thái Check-in / Thanh toán:</h6>
                         <div class="row g-2 align-items-end">
                             <div class="col-md-5">
@@ -197,6 +196,7 @@
 
                     <hr>
                     <h6 class="fw-bold">Thêm Dịch Vụ / Tiện Ích Phòng</h6>
+                    <!-- Khách hàng và Nhân viên đều có quyền thêm dịch vụ -->
                     <div class="row g-2 mb-3">
                         <div class="col-md-6"><select id="menu-select" class="form-select"></select></div>
                         <div class="col-md-3"><input type="number" id="menu-qty" class="form-control" value="1" min="1"></div>
@@ -204,7 +204,8 @@
                     </div>
                     <ul class="list-group mb-3" id="order-list"></ul>
                 </div>
-                <div class="modal-footer d-flex gap-2">
+                <!-- Checkout & Hủy phòng: Chỉ Nhân viên / Quản trị -->
+                <div class="modal-footer d-flex gap-2 staff-only-action" style="display:none;">
                     <div class="flex-grow-1">
                         <label class="small fw-bold">Thanh toán Check-out:</label>
                         <select id="checkout-method" class="form-select form-select-sm">
@@ -341,7 +342,6 @@
         }
 
         function renderRooms() {
-            // Kiểm tra trạng thái Full phòng (Tất cả các phòng đều không Trống)
             const totalRooms = allRoomsData.length;
             const busyRoomsCount = allRoomsData.filter(r => r.status !== 'Trống').length;
             const fullAlert = document.getElementById('full-room-alert');
@@ -352,7 +352,6 @@
                 fullAlert.style.display = 'none';
             }
 
-            // Lọc danh sách phòng theo bộ lọc người dùng chọn
             let filteredRooms = allRoomsData;
             if (currentFilter === 'empty') {
                 filteredRooms = allRoomsData.filter(r => r.status === 'Trống');
@@ -382,7 +381,13 @@
         }
 
         function openRoomAction(room) {
+            const user = JSON.parse(localStorage.getItem('user'));
             if(room.status === 'Trống') {
+                // Nếu khách hàng bấm vào phòng trống, nếu chưa đăng nhập thì không cho đặt phòng tại quầy hoặc thông báo yêu cầu đăng nhập nhân viên
+                if(!user) {
+                    alert('Chức năng đặt phòng tại quầy chỉ dành cho nhân viên/quản trị viên!');
+                    return;
+                }
                 document.getElementById('b-room-id').value = room.id;
                 document.getElementById('b-room-name').innerText = room.room_name;
                 document.getElementById('default-date').value = new Date().toISOString().split('T')[0];
@@ -396,8 +401,11 @@
                 document.getElementById('a-nights').innerText = room.nights;
                 document.getElementById('a-payment-status').innerText = room.payment_status;
                 document.getElementById('a-payment-method').innerText = room.payment_method === 'chuyen_khoan' ? 'Chuyển khoản' : 'Tiền mặt';
-                document.getElementById('up-payment-status').value = room.payment_status;
-                document.getElementById('up-payment-method').value = room.payment_method || 'tien_mat';
+                
+                if(user) {
+                    document.getElementById('up-payment-status').value = room.payment_status;
+                    document.getElementById('up-payment-method').value = room.payment_method || 'tien_mat';
+                }
                 loadOrders(room.id);
                 new bootstrap.Modal(document.getElementById('activeRoomModal')).show();
             }
@@ -466,6 +474,7 @@
             const quantity = document.getElementById('menu-qty').value;
             await fetch('/api/orders', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ room_id, item_id, quantity }) });
             loadOrders(room_id);
+            alert('Thêm dịch vụ thành công!');
         }
 
         async function checkoutRoom() {
@@ -505,9 +514,22 @@
             if(data.success) { localStorage.setItem('user', JSON.stringify(data.user)); location.reload(); } else { alert(data.error); }
         }
         function logout() { localStorage.removeItem('user'); location.reload(); }
+        
         function checkUserRole() {
             const user = JSON.parse(localStorage.getItem('user'));
-            if(user) { document.getElementById('login-btn').style.display = 'none'; document.getElementById('logout-btn').style.display = 'inline-block'; document.getElementById('admin-nav').style.display = 'inline-block'; }
+            const staffElements = document.querySelectorAll('.staff-only-action');
+            
+            if(user) { 
+                document.getElementById('login-btn').style.display = 'none'; 
+                document.getElementById('logout-btn').style.display = 'inline-block'; 
+                document.getElementById('admin-nav').style.display = 'inline-block';
+                
+                // Hiển thị các tính năng dành riêng cho nhân viên và quản trị
+                staffElements.forEach(el => el.style.display = 'block');
+            } else {
+                // Khách hàng: ẩn hoàn toàn các quyền chỉnh sửa/thanh toán/hủy phòng
+                staffElements.forEach(el => el.style.display = 'none');
+            }
         }
         init();
     </script>
