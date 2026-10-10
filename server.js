@@ -112,6 +112,12 @@ const initDatabase = async () => {
             date TEXT
         )`);
 
+        // Tự động bổ sung cột mới nếu cơ sở dữ liệu đã tồn tại từ trước
+        await pool.query(`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS customer_cccd TEXT`);
+        await pool.query(`ALTER TABLE bills ADD COLUMN IF NOT EXISTS customer_name TEXT`);
+        await pool.query(`ALTER TABLE bills ADD COLUMN IF NOT EXISTS customer_phone TEXT`);
+        await pool.query(`ALTER TABLE bills ADD COLUMN IF NOT EXISTS customer_cccd TEXT`);
+
         const userCountRes = await pool.query(`SELECT COUNT(*) as count FROM users`);
         if (userCountRes.rows[0] && parseInt(userCountRes.rows[0].count) === 0) {
             await pool.query(`INSERT INTO users (username, password, role) VALUES ('admin', '123456', 'admin')`);
