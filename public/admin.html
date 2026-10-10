@@ -120,7 +120,7 @@
                         <div class="mb-3"><label>Danh mục:</label><select id="i-cat" class="form-select"><option value="food">food</option><option value="drink">drink</option><option value="relax">relax</option><option value="khác">khác</option></select></div>
                         <div class="mb-3"><label>Số lượng tồn:</label><input type="number" id="i-qty" class="form-control"></div>
                         <div class="mb-3"><label>Đơn vị:</label><input type="text" id="i-unit" class="form-control" placeholder="thùng, lon..."></div>
-                        <div class="mb-3"><label>Giá Nhập (VNĐ):</label><input type="number" id="i-price" class="form-control" oninput="autoCalculateSellingPrice()"></div>
+                        <div class="mb-3"><label>Giá Nhập (VNĐ):</label><input type="number" id="i-price" class="form-control"></div>
                         <button class="btn btn-success" onclick="saveInventory()">Lưu Kho Hàng</button>
                         <button class="btn btn-secondary ms-2" onclick="resetInventoryForm()" style="display:none;" id="i-cancel">Hủy</button>
                     </div>
@@ -223,7 +223,7 @@
         </div>
     </div>
 
-    <!-- Modal Chi Tiết Bill -->
+    <!-- Modal Chi Tiết Bill (Đã bổ sung Loại đơn, Giảm giá và In lại bill) -->
     <div class="modal fade" id="billsDetailModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
@@ -239,14 +239,49 @@
                                     <th>ID Bill</th>
                                     <th>Ngày thanh toán</th>
                                     <th>Phòng</th>
+                                    <th>Loại đơn</th>
                                     <th>Số đêm</th>
+                                    <th>Giảm giá</th>
                                     <th>Tổng thanh toán</th>
                                     <th>Hình thức</th>
+                                    <th>Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody id="modal-bills-list"></tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal In Lại Bill -->
+    <div class="modal fade" id="reprintBillModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content p-4" id="printable-reprint-bill">
+                <div class="text-center mb-3">
+                    <h4 class="fw-bold mb-0" id="reprint-facility-name">KHÁCH SẠN</h4>
+                    <small id="reprint-address"></small><br><small id="reprint-phone"></small>
+                    <hr>
+                    <h5 class="fw-bold text-danger">HOÁ ĐƠN THANH TOÁN (IN LẠI)</h5>
+                    <p class="mb-1">Hóa đơn: <b id="reprint-bill-id"></b> | Phòng: <b id="reprint-room"></b> | Số đêm: <span id="reprint-nights"></span> đêm</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead><tr><th>Hạng mục</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+                        <tbody id="reprint-bill-items"></tbody>
+                    </table>
+                </div>
+                <div class="text-end">
+                    <p class="mb-1" id="reprint-discount-row" style="display:none;">Giảm giá: <span id="reprint-discount" class="text-success fw-bold">0đ</span></p>
+                    <h5 class="fw-bold text-danger" id="reprint-bill-total">TỔNG CỘNG: 0đ</h5>
+                </div>
+                <div class="text-center mt-3" id="reprint-qr-container">
+                    <p class="mb-1 small">QR Chuyển khoản:</p><img id="reprint-bill-qr-img" src="" style="max-height: 140px;" class="img-fluid">
+                </div>
+                <div class="text-center mt-4 d-print-none">
+                    <button class="btn btn-primary btn-sm me-2" onclick="window.print()">In Hóa Đơn</button>
+                    <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
                 </div>
             </div>
         </div>
@@ -297,11 +332,9 @@
                 </tr>
             `).join('');
 
-            // Tải dữ liệu kho hàng
             const iRes = await fetch('/api/inventory');
             cachedInventory = await iRes.json();
 
-            // Hiển thị danh sách Thực Đơn & Giá tự link từ kho hàng (Giá bán = Giá nhập * 130%)
             const mRes = await fetch('/api/menu');
             const menuList = await mRes.json();
 
@@ -313,7 +346,7 @@
                 return `
                     <tr>
                         <td>${i.item_name}</td>
-                        <td>${i.category}</td>
+                        <td>${i.category || 'khác'}</td>
                         <td>${i.unit}</td>
                         <td>${Number(sellingPrice).toLocaleString()}đ</td>
                         <td>
@@ -369,14 +402,10 @@
             loadReport();
         }
 
-        function autoCalculateSellingPrice() {
-            const importPrice = parseFloat(document.getElementById('i-price').value) || 0;
-        }
-
         function editMenuFromInventory(item, currentPrice, menuId) {
             document.getElementById('m-id').value = menuId || '';
             document.getElementById('m-name').value = item.item_name;
-            document.getElementById('m-cat').value = item.category;
+            document.getElementById('m-cat').value = item.category || 'khác';
             document.getElementById('m-unit').value = item.unit;
             document.getElementById('m-price').value = currentPrice;
             document.getElementById('m-cancel').style.display = 'inline-block';
@@ -425,18 +454,57 @@
         }
 
         async function openBillsDetailModal() {
-            document.getElementById('modal-bills-list').innerHTML = cachedBills.length === 0 ? `<tr><td colspan="6" class="text-center text-muted">Không có dữ liệu hóa đơn</td></tr>` :
-                cachedBills.map(b => `
-                    <tr>
-                        <td>#${b.id}</td>
-                        <td>${b.created_date}</td>
-                        <td><b>${b.room_name}</b></td>
-                        <td>${b.nights} đêm</td>
-                        <td class="text-danger fw-bold">${Number(b.grand_total).toLocaleString()}đ</td>
-                        <td>${b.payment_method}</td>
-                    </tr>
-                `).join('');
+            document.getElementById('modal-bills-list').innerHTML = cachedBills.length === 0 ? `<tr><td colspan="9" class="text-center text-muted">Không có dữ liệu hóa đơn</td></tr>` :
+                cachedBills.map(b => {
+                    const bookingTypeText = b.booking_type === 'online' ? '<span class="badge bg-info">Online</span>' : '<span class="badge bg-secondary">Tại quầy</span>';
+                    return `
+                        <tr>
+                            <td>#${b.id}</td>
+                            <td>${b.created_date}</td>
+                            <td><b>${b.room_name}</b></td>
+                            <td>${bookingTypeText}</td>
+                            <td>${b.nights} đêm</td>
+                            <td class="text-success">${Number(b.discount || 0).toLocaleString()}đ</td>
+                            <td class="text-danger fw-bold">${Number(b.grand_total).toLocaleString()}đ</td>
+                            <td>${b.payment_method}</td>
+                            <td><button class="btn btn-sm btn-outline-primary" onclick='reprintBill(${JSON.stringify(b)})'>🖨️ In lại</button></td>
+                        </tr>
+                    `;
+                }).join('');
             new bootstrap.Modal(document.getElementById('billsDetailModal')).show();
+        }
+
+        function reprintBill(b) {
+            document.getElementById('reprint-facility-name').innerText = currentSettings.name || 'KHÁCH SẠN';
+            document.getElementById('reprint-address').innerText = `Địa chỉ: ${currentSettings.address || ''}`;
+            document.getElementById('reprint-phone').innerText = `SĐT: ${currentSettings.phone || ''}`;
+            document.getElementById('reprint-bill-id').innerText = `#${b.id}`;
+            document.getElementById('reprint-room').innerText = b.room_name;
+            document.getElementById('reprint-nights').innerText = b.nights;
+            document.getElementById('reprint-bill-qr-img').src = currentSettings.qr_code || '';
+
+            if(Number(b.discount || 0) > 0) {
+                document.getElementById('reprint-discount-row').style.display = 'block';
+                document.getElementById('reprint-discount').innerText = Number(b.discount).toLocaleString() + 'đ';
+            } else {
+                document.getElementById('reprint-discount-row').style.display = 'none';
+            }
+
+            let html = `<tr><td>Tiền phòng (${b.nights} đêm)</td><td>${b.nights}</td><td>-</td><td><b>${Number(b.room_total).toLocaleString()}đ</b></td></tr>`;
+            
+            try {
+                const items = JSON.parse(b.items_detail || '[]');
+                items.forEach(i => {
+                    const unitPrice = i.quantity > 0 ? (i.total_price / i.quantity) : 0;
+                    html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${unitPrice.toLocaleString()}đ</td><td>${Number(i.total_price).toLocaleString()}đ</td></tr>`;
+                });
+            } catch(e) {}
+
+            document.getElementById('reprint-bill-items').innerHTML = html;
+            document.getElementById('reprint-bill-total').innerText = `TỔNG CỘNG: ${Number(b.grand_total).toLocaleString()}đ (${b.payment_method})`;
+
+            bootstrap.Modal.getInstance(document.getElementById('billsDetailModal')).hide();
+            new bootstrap.Modal(document.getElementById('reprintBillModal')).show();
         }
 
         async function saveSettings() {
@@ -498,7 +566,7 @@
         function editInventory(i) {
             document.getElementById('i-id').value = i.id;
             document.getElementById('i-name').value = i.item_name;
-            document.getElementById('i-cat').value = i.category;
+            document.getElementById('i-cat').value = i.category || 'khác';
             document.getElementById('i-qty').value = i.quantity;
             document.getElementById('i-unit').value = i.unit;
             document.getElementById('i-price').value = i.import_price;
