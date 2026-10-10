@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Trang Quản Trị Khách Sạn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @media print {
             body * { visibility: hidden; }
@@ -31,7 +30,7 @@
         </ul>
 
         <div class="tab-content">
-            <!-- Cài đặt -->
+            <!-- Cài đặt & Banner -->
             <div class="tab-pane fade show active" id="settings-tab">
                 <div class="row">
                     <div class="col-md-6 card p-4 mb-3">
@@ -43,7 +42,7 @@
                         <button class="btn btn-primary" onclick="saveSettings()">Lưu Thông Tin</button>
                     </div>
                     <div class="col-md-6 card p-4 mb-3">
-                        <h4 class="mb-3 text-success">🎁 Khuyến Mãi Đặt Phòng</h4>
+                        <h4 class="mb-3 text-success">🎁 Khuyến Mãi & Banner Trang Chủ</h4>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Nội dung khuyến mãi:</label>
                             <input type="text" id="s-promo-text" class="form-control" placeholder="Ví dụ: Giảm giá mùa du lịch...">
@@ -52,7 +51,11 @@
                             <label class="form-label fw-bold">Giá trị % khuyến mãi:</label>
                             <input type="number" id="s-promo-discount" class="form-control" min="0" max="100">
                         </div>
-                        <button class="btn btn-success" onclick="saveBanners()">Cập Nhật Khuyến Mãi</button>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Link Banner (Mỗi dòng 1 link ảnh, tự động đổi ảnh mỗi 5 giây):</label>
+                            <textarea id="s-banners" class="form-control" rows="4" placeholder="https://example.com/banner1.jpg&#10;https://example.com/banner2.jpg"></textarea>
+                        </div>
+                        <button class="btn btn-success" onclick="saveBanners()">Cập Nhật Khuyến Mãi & Banner</button>
                     </div>
                 </div>
             </div>
@@ -78,7 +81,7 @@
                 </div>
             </div>
 
-            <!-- Dịch vụ -->
+            <!-- Dịch vụ (Thêm danh mục Thư giãn) -->
             <div class="tab-pane fade" id="menu-tab">
                 <div class="row">
                     <div class="col-md-5 card p-4">
@@ -89,10 +92,11 @@
                             <select id="m-cat" class="form-select">
                                 <option value="food">food (Đồ ăn)</option>
                                 <option value="drink">drink (Đồ uống)</option>
+                                <option value="relax">relax (Thư giãn / Spa / Massage)</option>
                                 <option value="khác">khác (Khác)</option>
                             </select>
                         </div>
-                        <div class="mb-3"><label>Đơn vị:</label><input type="text" id="m-unit" class="form-control" placeholder="chai, suất..."></div>
+                        <div class="mb-3"><label>Đơn vị:</label><input type="text" id="m-unit" class="form-control" placeholder="chai, suất, đĩa..."></div>
                         <div class="mb-3"><label>Giá Bán (VNĐ):</label><input type="number" id="m-price" class="form-control"></div>
                         <button class="btn btn-success" onclick="saveMenu()">Lưu Lại</button>
                     </div>
@@ -112,12 +116,11 @@
                         <h4 class="mb-3" id="inv-form-title">Nhập / Cập Nhật Kho</h4>
                         <input type="hidden" id="i-id">
                         <div class="mb-3"><label>Tên hàng:</label><input type="text" id="i-name" class="form-control"></div>
-                        <div class="mb-3"><label>Danh mục:</label><select id="i-cat" class="form-select"><option value="food">food</option><option value="drink">drink</option><option value="khác">khác</option></select></div>
+                        <div class="mb-3"><label>Danh mục:</label><select id="i-cat" class="form-select"><option value="food">food</option><option value="drink">drink</option><option value="relax">relax</option><option value="khác">khác</option></select></div>
                         <div class="mb-3"><label>Số lượng tồn:</label><input type="number" id="i-qty" class="form-control"></div>
                         <div class="mb-3"><label>Đơn vị:</label><input type="text" id="i-unit" class="form-control"></div>
                         <div class="mb-3"><label>Giá Nhập (VNĐ):</label><input type="number" id="i-price" class="form-control"></div>
                         <button class="btn btn-success" onclick="saveInventory()">Lưu Kho Hàng</button>
-                        <button class="btn btn-secondary ms-2" onclick="resetInventoryForm()" id="i-cancel" style="display:none;">Hủy</button>
                     </div>
                     <div class="col-md-7">
                         <table class="table table-bordered bg-white align-middle">
@@ -174,7 +177,6 @@
                 <div class="card p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="mb-0">Báo Cáo Doanh Thu & Lợi Nhuận</h4>
-                        <!-- Nút gọi API tải file Excel có đóng khung (đã cấu hình sẵn trong server.js) -->
                         <a href="/api/reports/export-excel" class="btn btn-success fw-bold">📥 Xuất Excel (Đa Sheet & Đóng Khung)</a>
                     </div>
                     <div class="row g-3 mb-4 align-items-end">
@@ -207,7 +209,6 @@
                         <div class="mb-3"><label>Mật khẩu:</label><input type="password" id="u-pass" class="form-control" placeholder="Để trống nếu không đổi"></div>
                         <div class="mb-3"><label>Quyền:</label><select id="u-role" class="form-select"><option value="staff">Nhân viên</option><option value="admin">Admin</option></select></div>
                         <button class="btn btn-primary" onclick="saveUser()">Lưu Tài Khoản</button>
-                        <button class="btn btn-secondary ms-2" onclick="resetUserForm()" id="u-cancel" style="display:none;">Hủy</button>
                     </div>
                     <div class="col-md-7">
                         <table class="table table-bordered bg-white">
@@ -275,6 +276,7 @@
             document.getElementById('s-qr').value = currentSettings.qr_code || '';
             document.getElementById('s-promo-text').value = currentSettings.promo_text || '';
             document.getElementById('s-promo-discount').value = currentSettings.promo_discount || 0;
+            try { document.getElementById('s-banners').value = JSON.parse(currentSettings.banners || '[]').join('\n'); } catch(e) {}
 
             document.getElementById('e-date').value = new Date().toISOString().split('T')[0];
 
@@ -296,7 +298,7 @@
             const mRes = await fetch('/api/menu');
             const menu = await mRes.json();
             document.getElementById('menu-table').innerHTML = menu.map(m => `
-                <tr><td>${m.item_name}</td><td>${m.category}</td><td>${m.unit}</td><td>${m.price.toLocaleString()}đ</td><td><button class="btn btn-sm btn-warning me-1" onclick='editMenu(${JSON.stringify(m)})'>Sửa</button><button class="btn btn-sm btn-danger" onclick="deleteMenu(${m.id})">Xóa</button></td></tr>
+                <tr><td>${m.item_name}</td><td>${m.category}</td><td>${m.unit}</td><td>${m.price.toLocaleString()}đ</td><td><button class="btn btn-sm btn-danger" onclick="deleteMenu(${m.id})">Xóa</button></td></tr>
             `).join('');
 
             const iRes = await fetch('/api/inventory');
@@ -312,10 +314,7 @@
                         <td>${i.unit}</td>
                         <td>${i.import_price.toLocaleString()}đ</td>
                         <td class="fw-bold text-success">${totalItemVal.toLocaleString()}đ</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning me-1" onclick='editInventory(${JSON.stringify(i)})'>Sửa</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteInventory(${i.id})">Xóa</button>
-                        </td>
+                        <td><button class="btn btn-sm btn-danger" onclick="deleteInventory(${i.id})">Xóa</button></td>
                     </tr>
                 `;
             }).join('');
@@ -338,10 +337,7 @@
                     <tr>
                         <td><b>${u.username}</b></td>
                         <td><span class="badge ${u.role === 'admin' ? 'bg-danger' : 'bg-secondary'}">${u.role}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-warning me-1" onclick='editUser(${JSON.stringify(u)})'>Sửa</button>
-                            ${u.username !== 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Xóa</button>` : ''}
-                        </td>
+                        <td>${u.username !== 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Xóa</button>` : ''}</td>
                     </tr>
                 `).join('');
             }
@@ -384,6 +380,7 @@
         }
 
         async function saveSettings() {
+            const banners = document.getElementById('s-banners').value.split('\n').map(s => s.trim()).filter(s => s);
             await fetch('/api/settings', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ 
@@ -393,22 +390,14 @@
                     qr_code: document.getElementById('s-qr').value, 
                     promo_text: document.getElementById('s-promo-text').value,
                     promo_discount: document.getElementById('s-promo-discount').value,
-                    banners: [] 
+                    banners 
                 })
             });
             alert('Lưu thông tin thành công!'); loadAll();
         }
 
         async function saveBanners() {
-            await fetch('/api/settings', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    ...currentSettings, 
-                    promo_text: document.getElementById('s-promo-text').value,
-                    promo_discount: document.getElementById('s-promo-discount').value
-                })
-            });
-            alert('Cập nhật khuyến mãi thành công!'); loadAll();
+            saveSettings();
         }
 
         async function saveRoom() {
@@ -430,9 +419,7 @@
             document.getElementById('r-price').value = '';
             document.getElementById('r-cancel').style.display = 'none';
         }
-        async function deleteRoom(id) {
-            if(confirm('Xóa phòng này?')) { await fetch(`/api/rooms/${id}`, { method: 'DELETE' }); loadAll(); }
-        }
+        async function deleteRoom(id) { if(confirm('Xóa phòng này?')) { await fetch(`/api/rooms/${id}`, { method: 'DELETE' }); loadAll(); } }
 
         async function saveMenu() {
             await fetch('/api/menu/save', {
@@ -445,11 +432,9 @@
                     price: document.getElementById('m-price').value
                 })
             });
-            alert('Lưu thành công!'); loadAll();
+            alert('Lưu dịch vụ thành công!'); loadAll();
         }
-        async function deleteMenu(id) {
-            if(confirm('Xóa dịch vụ này?')) { await fetch(`/api/menu/${id}`, { method: 'DELETE' }); loadAll(); }
-        }
+        async function deleteMenu(id) { if(confirm('Xóa dịch vụ này?')) { await fetch(`/api/menu/${id}`, { method: 'DELETE' }); loadAll(); } }
 
         async function saveInventory() {
             await fetch('/api/inventory/save', {
@@ -465,9 +450,7 @@
             });
             alert('Lưu kho thành công!'); loadAll();
         }
-        async function deleteInventory(id) {
-            if(confirm('Xóa kho này?')) { await fetch(`/api/inventory/${id}`, { method: 'DELETE' }); loadAll(); }
-        }
+        async function deleteInventory(id) { if(confirm('Xóa kho này?')) { await fetch(`/api/inventory/${id}`, { method: 'DELETE' }); loadAll(); } }
 
         async function saveExpense() {
             await fetch('/api/expenses', {
@@ -492,16 +475,9 @@
                     role: document.getElementById('u-role').value
                 })
             });
-            alert('Lưu tài khoản thành công!'); resetUserForm(); loadAll();
+            alert('Lưu tài khoản thành công!'); loadAll();
         }
-        function resetUserForm() {
-            document.getElementById('u-id').value = '';
-            document.getElementById('u-name').value = '';
-            document.getElementById('u-pass').value = '';
-        }
-        async function deleteUser(id) {
-            if(confirm('Xóa tài khoản này?')) { await fetch(`/api/users/${id}`, { method: 'DELETE' }); loadAll(); }
-        }
+        async function deleteUser(id) { if(confirm('Xóa tài khoản này?')) { await fetch(`/api/users/${id}`, { method: 'DELETE' }); loadAll(); } }
 
         loadAll();
     </script>
