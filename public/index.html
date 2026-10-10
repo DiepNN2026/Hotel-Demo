@@ -15,8 +15,8 @@
         .banner-img { height: 280px; object-fit: cover; width: 100%; border-radius: 10px; }
         @media print {
             body * { visibility: hidden; }
-            #printable-bill, #printable-bill * { visibility: visible; }
-            #printable-bill { position: absolute; left: 0; top: 0; width: 100%; }
+            #printable-bill, #printable-bill *, #printable-preliminary-bill, #printable-preliminary-bill * { visibility: visible; }
+            #printable-bill, #printable-preliminary-bill { position: absolute; left: 0; top: 0; width: 100%; }
         }
     </style>
 </head>
@@ -114,7 +114,7 @@
         </div>
     </div>
 
-    <!-- Modal Đặt Phòng (Dành cho cả Khách và Nhân viên) -->
+    <!-- Modal Đặt Phòng (Bổ sung nhập CCCD) -->
     <div class="modal fade" id="bookModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -133,6 +133,7 @@
                     </div>
                     <div class="mb-3"><label class="form-label">Họ tên khách:</label><input type="text" id="c-name" class="form-control" placeholder="Nhập họ tên..."></div>
                     <div class="mb-3"><label class="form-label">Số điện thoại:</label><input type="text" id="c-phone" class="form-control" placeholder="Nhập SĐT..."></div>
+                    <div class="mb-3"><label class="form-label">Số CCCD / CMND:</label><input type="text" id="c-cccd" class="form-control" placeholder="Nhập số CCCD..."></div>
                     
                     <div class="mb-3">
                         <label class="form-label fw-bold">Danh sách ngày ở (mặc định hôm nay):</label>
@@ -147,7 +148,7 @@
         </div>
     </div>
 
-    <!-- Modal Tạm Tính Bill (Dành riêng cho Đặt Online) -->
+    <!-- Modal Tạm Tính Bill (Hiển thị đầy đủ thông tin khách và hỗ trợ tải PDF) -->
     <div class="modal fade" id="preliminaryBillModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-4" id="printable-preliminary-bill">
@@ -157,6 +158,10 @@
                     <hr>
                     <h5 class="fw-bold text-primary">PHIẾU TẠM TÍNH BILL (ĐẶT ONLINE)</h5>
                     <p class="mb-1">Phòng: <b id="pre-room"></b> | Số đêm: <span id="pre-nights"></span> đêm</p>
+                    <div class="text-start border p-2 rounded bg-light mb-2 small">
+                        <p class="mb-1"><strong>Khách hàng:</strong> <span id="pre-customer"></span></p>
+                        <p class="mb-1"><strong>SĐT:</strong> <span id="pre-cust-phone"></span> | <strong>CCCD:</strong> <span id="pre-cust-cccd"></span></p>
+                    </div>
                     <p class="text-warning small mb-0">Trạng thái: <b>Chờ xác thực từ Khách Sạn (Phòng màu vàng)</b></p>
                 </div>
                 <div class="table-responsive">
@@ -181,7 +186,7 @@
         </div>
     </div>
 
-    <!-- Modal Phòng Chờ Xác Thực (Dành cho Nhân viên / Admin duyệt) -->
+    <!-- Modal Phòng Chờ Xác Thực -->
     <div class="modal fade" id="pendingRoomModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -192,6 +197,7 @@
                 <div class="modal-body">
                     <p><strong>Khách hàng:</strong> <span id="p-customer"></span></p>
                     <p><strong>Số điện thoại:</strong> <span id="p-phone"></span></p>
+                    <p><strong>Số CCCD:</strong> <span id="p-cccd"></span></p>
                     <p><strong>Hình thức:</strong> <span class="badge bg-info">Đặt Online</span></p>
                     <p><strong>Số đêm ở:</strong> <span id="p-nights"></span> đêm</p>
                     <div class="alert alert-warning small">Đơn đặt phòng này đang chờ xác nhận thanh toán chuyển khoản từ khách hàng.</div>
@@ -214,7 +220,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="a-room-id">
-                    <p><strong>Khách:</strong> <span id="a-customer"></span> | <strong>Hình thức:</strong> <span id="a-type-label" class="badge bg-secondary"></span> | <strong>Số đêm:</strong> <span id="a-nights"></span> đêm | <strong>Thanh toán tiền phòng:</strong> <span id="a-payment-status" class="badge bg-warning"></span> (<span id="a-payment-method"></span>)</p>
+                    <p><strong>Khách:</strong> <span id="a-customer"></span> (<abbr title="CCCD">CCCD</abbr>: <span id="a-cccd"></span>) | <strong>Hình thức:</strong> <span id="a-type-label" class="badge bg-secondary"></span> | <strong>Số đêm:</strong> <span id="a-nights"></span> đêm | <strong>Thanh toán tiền phòng:</strong> <span id="a-payment-status" class="badge bg-warning"></span> (<span id="a-payment-method"></span>)</p>
                     
                     <div class="card p-3 bg-light mb-3 staff-only-action" style="display:none;">
                         <h6 class="fw-bold">Cập nhật trạng thái Check-in / Thanh toán:</h6>
@@ -264,7 +270,7 @@
         </div>
     </div>
 
-    <!-- Modal In Bill -->
+    <!-- Modal In Bill (Hiển thị thông tin khách hàng trên hóa đơn) -->
     <div class="modal fade" id="billModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-4" id="printable-bill">
@@ -274,6 +280,10 @@
                     <hr>
                     <h5 class="fw-bold text-danger">HOÁ ĐƠN THANH TOÁN</h5>
                     <p class="mb-1">Phòng: <b id="bill-room"></b> | Số đêm: <span id="bill-nights"></span> đêm</p>
+                    <div class="text-start border p-2 rounded bg-light mb-2 small">
+                        <p class="mb-1"><strong>Khách hàng:</strong> <span id="bill-customer"></span></p>
+                        <p class="mb-1"><strong>SĐT:</strong> <span id="bill-cust-phone"></span> | <strong>CCCD:</strong> <span id="bill-cust-cccd"></span></p>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
@@ -441,9 +451,9 @@
                 document.getElementById('default-date').value = new Date().toISOString().split('T')[0];
                 document.getElementById('c-name').value = '';
                 document.getElementById('c-phone').value = '';
+                document.getElementById('c-cccd').value = '';
                 new bootstrap.Modal(document.getElementById('bookModal')).show();
             } else if(room.status === 'Chờ xác thực') {
-                // Chỉ nhân viên/admin mới có quyền duyệt/từ chối phòng chờ xác thực
                 if(!user) {
                     alert('Đơn đặt phòng đang chờ khách sạn xác thực thanh toán chuyển khoản.');
                     return;
@@ -451,6 +461,7 @@
                 document.getElementById('p-room-name').innerText = room.room_name;
                 document.getElementById('p-customer').innerText = room.customer_name;
                 document.getElementById('p-phone').innerText = room.customer_phone || '---';
+                document.getElementById('p-cccd').innerText = room.customer_cccd || '---';
                 document.getElementById('p-nights').innerText = room.nights;
                 window.selectedPendingRoomId = room.id;
                 new bootstrap.Modal(document.getElementById('pendingRoomModal')).show();
@@ -458,6 +469,7 @@
                 document.getElementById('a-room-id').value = room.id;
                 document.getElementById('a-room-name').innerText = room.room_name;
                 document.getElementById('a-customer').innerText = room.customer_name;
+                document.getElementById('a-cccd').innerText = room.customer_cccd || '---';
                 document.getElementById('a-nights').innerText = room.nights;
                 document.getElementById('a-type-label').innerText = room.booking_type === 'online' ? 'Online' : 'Tại quầy';
                 document.getElementById('a-payment-status').innerText = room.payment_status;
@@ -486,7 +498,8 @@
             const booking_type = document.getElementById('b-type').value;
             const customer_name = document.getElementById('c-name').value;
             const customer_phone = document.getElementById('c-phone').value;
-            const payment_status = booking_type === 'online' ? 'Chưa thanh toán' : 'Chưa thanh toán';
+            const customer_cccd = document.getElementById('c-cccd').value;
+            const payment_status = 'Chưa thanh toán';
             const payment_method = 'chuyen_khoan';
 
             const dateInputs = document.querySelectorAll('#date-list-container input[type="date"]');
@@ -496,18 +509,20 @@
             const res = await fetch('/api/rooms/book', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ room_id, booking_type, customer_name, customer_phone, booking_dates, payment_status, payment_method }) 
+                body: JSON.stringify({ room_id, booking_type, customer_name, customer_phone, customer_cccd, booking_dates, payment_status, payment_method }) 
             });
             const data = await res.json();
             if(data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('bookModal')).hide();
                 if(booking_type === 'online') {
-                    // Hiển thị modal tạm tính bill để khách hàng xem và in PDF thanh toán chuyển khoản
                     document.getElementById('pre-facility-name').innerText = globalSettings.name || 'KHÁCH SẠN';
                     document.getElementById('pre-address').innerText = `Địa chỉ: ${globalSettings.address || ''}`;
                     document.getElementById('pre-phone').innerText = `SĐT: ${globalSettings.phone || ''}`;
                     document.getElementById('pre-room').innerText = data.preliminaryBill.room_name;
                     document.getElementById('pre-nights').innerText = data.preliminaryBill.nights;
+                    document.getElementById('pre-customer').innerText = data.preliminaryBill.customer_name;
+                    document.getElementById('pre-cust-phone').innerText = data.preliminaryBill.customer_phone || '---';
+                    document.getElementById('pre-cust-cccd').innerText = data.preliminaryBill.customer_cccd || '---';
                     document.getElementById('pre-qr-img').src = globalSettings.qr_code || '';
 
                     if(Number(data.preliminaryBill.discountAmount) > 0) {
@@ -590,6 +605,9 @@
                 document.getElementById('bill-phone').innerText = `SĐT: ${data.setting.phone}`;
                 document.getElementById('bill-room').innerText = data.report.room_name;
                 document.getElementById('bill-nights').innerText = data.report.nights;
+                document.getElementById('bill-customer').innerText = data.report.customer_name || '---';
+                document.getElementById('bill-cust-phone').innerText = data.report.customer_phone || '---';
+                document.getElementById('bill-cust-cccd').innerText = data.report.customer_cccd || '---';
                 document.getElementById('bill-qr-img').src = data.setting.qr_code;
 
                 if(Number(data.report.discountAmount) > 0) {
