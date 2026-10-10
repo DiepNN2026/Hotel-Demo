@@ -135,7 +135,6 @@ const initDatabase = async () => {
 
 initDatabase();
 
-// --- API Auth & Users ---
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -173,7 +172,6 @@ app.delete('/api/users/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- API Settings ---
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query(`SELECT * FROM settings LIMIT 1`);
@@ -190,7 +188,6 @@ app.post('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- API Rooms ---
 app.get('/api/rooms', async (req, res) => {
     try {
         const result = await pool.query(`SELECT * FROM rooms ORDER BY id ASC`);
@@ -225,8 +222,46 @@ app.post('/api/rooms/book', async (req, res) => {
         const todayStr = new Date().toISOString().split('T')[0];
         let datesArr = Array.isArray(booking_dates) && booking_dates.length > 0 ? booking_dates : [todayStr];
         
-        await pool.query(`UPDATE rooms SET status = 'Đang có khách', booking_type = $1, customer_name = $2, customer_phone = $3, booking_dates = $4, payment_status = $5, payment_method = $6, start_date = $7 WHERE id = $8`, 
-            [booking_type || 'counter', customer_name || 'Khách lẻ', customer_phone || '', JSON.stringify(datesArr), payment_status || 'Chưa thanh toán', payment_method || 'tiền mặt', datesArr[0], room_id]);
+        // Nếu là đặt online thì trạng thái ban đầu là "Chờ xác thực" (màu vàng)
+        const roomStatus = (booking_type === 'online') ? 'Chờ xác thực' : 'Đang có khách';
+
+        await pool.query(`UPDATE rooms SET status = $1, booking_type = $2, customer_name = $3, customer_phone = $4, booking_dates = $5, payment_status = $6, payment_method = $7, start_date = $8 WHERE id = $9`, 
+            [roomStatus, booking_type || 'counter', customer_name || 'Khách lẻ', customer_phone || '', JSON.stringify(datesArr), payment_status || 'Chưa thanh toán', payment_method || 'chuyen_khoan', datesArr[0], room_id]);
+        
+        // Lấy thông tin tính toán tạm tính bill nếu là online để trả về
+        const settingRes = await pool.query(`SELECT * FROM settings LIMIT 1`);
+        const setting = settingRes.rows[0];
+        const roomRes = await pool.query(`SELECT * FROM rooms WHERE id = $1`, [room_id]);
+        const room = roomRes.rows[0];
+
+        const nights = datesArr.length;
+        let roomTotal = nights * room.price_per_night;
+        const discountPercent = (booking_type === 'online') ? (setting.promo_discount || 0) : 0;
+        const discountAmount = (roomTotal * discountPercent) / 100;
+        roomTotal = roomTotal - discountAmount;
+
+        res.json({
+            success: true,
+            setting: setting || {},
+            preliminaryBill: {
+                room_name: room.room_name,
+                nights,
+                roomTotal: roomTotal.toFixed(0),
+                discountAmount: discountAmount.toFixed(0),
+                grandTotal: roomTotal.toFixed(0)
+            }
+        });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/rooms/verify', async (req, res) => {
+    const { room_id, action } = req.body; // action: 'approve' hoặc 'reject'
+    try {
+        if (action === 'approve') {
+            await pool.query(`UPDATE rooms SET status = 'Đang có khách', payment_status = 'Đã thanh toán' WHERE id = $1`, [room_id]);
+        } else {
+            await pool.query(`UPDATE rooms SET status = 'Trống', booking_type = NULL, customer_name = NULL, customer_phone = NULL, payment_status = 'Chưa thanh toán', payment_method = NULL, start_date = NULL, booking_dates = '[]' WHERE id = $1`, [room_id]);
+        }
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -256,7 +291,7 @@ app.post('/api/rooms/checkout', async (req, res) => {
         const roomRes = await pool.query(`SELECT * FROM rooms WHERE id = $1`, [room_id]);
         const room = roomRes.rows[0];
 
-        if (!room || room.status === 'Trống') return res.status(400).json({ error: 'Phòng đang trống!' });
+        if (!room || room.status === 'Trống' || room.status === 'Chờ xác thực') return res.status(400).json({ error: 'Phòng không khả dụng để checkout!' });
 
         let datesArr = [];
         try { datesArr = JSON.parse(room.booking_dates || '[]'); } catch(e) {}
@@ -318,7 +353,6 @@ app.post('/api/rooms/checkout', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- API Menu ---
 app.get('/api/menu', async (req, res) => {
     try { const result = await pool.query(`SELECT * FROM menu ORDER BY id ASC`); res.json(result.rows || []); } 
     catch (err) { res.status(500).json({ error: err.message }); }
@@ -339,7 +373,6 @@ app.delete('/api/menu/:id', async (req, res) => {
     catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- API Inventory & Expenses & Reports ---
 app.get('/api/inventory', async (req, res) => {
     try { const result = await pool.query(`SELECT * FROM inventory`); res.json(result.rows || []); } catch (err) { res.status(500).json({ error: err.message }); }
 });
