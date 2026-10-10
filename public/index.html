@@ -10,6 +10,8 @@
         .room-empty:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .room-busy { background-color: #f8d7da !important; border-color: #f5c2c7 !important; cursor: pointer; transition: 0.2s; }
         .room-busy:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .room-pending { background-color: #fff3cd !important; border-color: #ffeeba !important; cursor: pointer; transition: 0.2s; }
+        .room-pending:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         .banner-img { height: 280px; object-fit: cover; width: 100%; border-radius: 10px; }
         @media print {
             body * { visibility: hidden; }
@@ -34,6 +36,7 @@
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownRooms">
                             <li><a class="dropdown-item" href="#" onclick="filterRooms('all')">🏠 Tất Cả Phòng</a></li>
                             <li><a class="dropdown-item" href="#" onclick="filterRooms('empty')">🟢 Phòng Trống</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="filterRooms('pending')">🟡 Chờ Xác Thực (Online)</a></li>
                             <li><a class="dropdown-item" href="#" onclick="filterRooms('busy')">🔴 Đang Có Khách</a></li>
                         </ul>
                     </li>
@@ -68,6 +71,7 @@
             <h3 id="facility-title" class="fw-bold">Sơ Đồ Phòng Khách Sạn</h3>
             <div>
                 <span class="badge bg-success p-2 me-2">Phòng Trống</span>
+                <span class="badge bg-warning text-dark p-2 me-2">Chờ Xác Thực</span>
                 <span class="badge bg-danger p-2">Đang Có Khách</span>
             </div>
         </div>
@@ -79,7 +83,7 @@
         <div class="row" id="room-container"></div>
     </div>
 
-    <!-- Tab 2: Bảng Giá Dịch Vụ (Tự động phân loại theo danh mục) -->
+    <!-- Tab 2: Bảng Giá Dịch Vụ -->
     <div class="container my-4" id="tab-menu-price" style="display:none;">
         <h3 class="mb-4 fw-bold">Bảng Giá Dịch Vụ & Tiện Ích Khách Sạn</h3>
         <div class="row g-3">
@@ -110,7 +114,7 @@
         </div>
     </div>
 
-    <!-- Modal Đặt Phòng -->
+    <!-- Modal Đặt Phòng (Dành cho cả Khách và Nhân viên) -->
     <div class="modal fade" id="bookModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -123,8 +127,8 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">Hình thức đặt:</label>
                         <select id="b-type" class="form-select">
-                            <option value="counter">Tại quầy (Check-in ngay)</option>
                             <option value="online">Đặt trực tuyến (Online)</option>
+                            <option value="counter">Tại quầy (Check-in ngay)</option>
                         </select>
                     </div>
                     <div class="mb-3"><label class="form-label">Họ tên khách:</label><input type="text" id="c-name" class="form-control" placeholder="Nhập họ tên..."></div>
@@ -137,23 +141,65 @@
                         </div>
                         <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addDateInput()">+ Thêm ngày ở (nếu ở nhiều ngày)</button>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Trạng thái thanh toán:</label>
-                        <select id="b-payment-status" class="form-select">
-                            <option value="Chưa thanh toán">Chưa thanh toán</option>
-                            <option value="Đã thanh toán">Đã thanh toán</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Phương thức thanh toán:</label>
-                        <select id="b-payment-method" class="form-select">
-                            <option value="tien_mat">Tiền mặt</option>
-                            <option value="chuyen_khoan">Chuyển khoản</option>
-                        </select>
-                    </div>
                 </div>
                 <div class="modal-footer"><button class="btn btn-success w-100" onclick="confirmBooking()">Xác Nhận Đặt Phòng</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tạm Tính Bill (Dành riêng cho Đặt Online) -->
+    <div class="modal fade" id="preliminaryBillModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content p-4" id="printable-preliminary-bill">
+                <div class="text-center mb-3">
+                    <h4 class="fw-bold mb-0" id="pre-facility-name">KHÁCH SẠN</h4>
+                    <small id="pre-address"></small><br><small id="pre-phone"></small>
+                    <hr>
+                    <h5 class="fw-bold text-primary">PHIẾU TẠM TÍNH BILL (ĐẶT ONLINE)</h5>
+                    <p class="mb-1">Phòng: <b id="pre-room"></b> | Số đêm: <span id="pre-nights"></span> đêm</p>
+                    <p class="text-warning small mb-0">Trạng thái: <b>Chờ xác thực từ Khách Sạn (Phòng màu vàng)</b></p>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead><tr><th>Hạng mục</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+                        <tbody id="pre-bill-items"></tbody>
+                    </table>
+                </div>
+                <div class="text-end">
+                    <p class="mb-1" id="pre-discount-row" style="display:none;">Giảm giá Online: <span id="pre-discount" class="text-success fw-bold">0đ</span></p>
+                    <h5 class="fw-bold text-danger" id="pre-total">TỔNG CỘNG: 0đ</h5>
+                </div>
+                <div class="text-center mt-3">
+                    <p class="mb-1 small">Quét mã QR để Chuyển khoản thanh toán:</p>
+                    <img id="pre-qr-img" src="" style="max-height: 140px;" class="img-fluid">
+                </div>
+                <div class="text-center mt-4 d-print-none">
+                    <button class="btn btn-primary btn-sm me-2" onclick="window.print()">📥 Tải / In PDF Tạm Tính</button>
+                    <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal" onclick="location.reload()">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Phòng Chờ Xác Thực (Dành cho Nhân viên / Admin duyệt) -->
+    <div class="modal fade" id="pendingRoomModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">Phòng Chờ Xác Thực: <span id="p-room-name"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Khách hàng:</strong> <span id="p-customer"></span></p>
+                    <p><strong>Số điện thoại:</strong> <span id="p-phone"></span></p>
+                    <p><strong>Hình thức:</strong> <span class="badge bg-info">Đặt Online</span></p>
+                    <p><strong>Số đêm ở:</strong> <span id="p-nights"></span> đêm</p>
+                    <div class="alert alert-warning small">Đơn đặt phòng này đang chờ xác nhận thanh toán chuyển khoản từ khách hàng.</div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button class="btn btn-danger" onclick="verifyBooking('reject')">❌ Từ chối đơn</button>
+                    <button class="btn btn-success" onclick="verifyBooking('approve')">✔ Xác thực thành công (Duyệt)</button>
+                </div>
             </div>
         </div>
     </div>
@@ -168,7 +214,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="a-room-id">
-                    <p><strong>Khách:</strong> <span id="a-customer"></span> | <strong>Số đêm:</strong> <span id="a-nights"></span> đêm | <strong>Thanh toán tiền phòng:</strong> <span id="a-payment-status" class="badge bg-warning"></span> (<span id="a-payment-method"></span>)</p>
+                    <p><strong>Khách:</strong> <span id="a-customer"></span> | <strong>Hình thức:</strong> <span id="a-type-label" class="badge bg-secondary"></span> | <strong>Số đêm:</strong> <span id="a-nights"></span> đêm | <strong>Thanh toán tiền phòng:</strong> <span id="a-payment-status" class="badge bg-warning"></span> (<span id="a-payment-method"></span>)</p>
                     
                     <div class="card p-3 bg-light mb-3 staff-only-action" style="display:none;">
                         <h6 class="fw-bold">Cập nhật trạng thái Check-in / Thanh toán:</h6>
@@ -269,24 +315,25 @@
         let menuData = [];
         let allRoomsData = [];
         let currentFilter = 'all';
+        let globalSettings = {};
 
         async function init() {
             try {
                 const resSet = await fetch('/api/settings');
                 if (resSet.ok) {
-                    const settings = await resSet.json();
-                    if(settings.name) {
-                        document.getElementById('brand-name').innerText = settings.name;
-                        document.getElementById('page-title').innerText = settings.name;
+                    globalSettings = await resSet.json();
+                    if(globalSettings.name) {
+                        document.getElementById('brand-name').innerText = globalSettings.name;
+                        document.getElementById('page-title').innerText = globalSettings.name;
                     }
-                    if(settings.promo_text) {
+                    if(globalSettings.promo_text) {
                         const pAlert = document.getElementById('promo-alert-banner');
                         pAlert.style.display = 'block';
-                        pAlert.innerText = `🎁 ${settings.promo_text}`;
+                        pAlert.innerText = `🎁 ${globalSettings.promo_text}`;
                     }
-                    if(settings.banners) {
+                    if(globalSettings.banners) {
                         try {
-                            const banners = JSON.parse(settings.banners);
+                            const banners = JSON.parse(globalSettings.banners);
                             if(banners.length > 0) {
                                 document.getElementById('banner-section').style.display = 'block';
                                 document.getElementById('carousel-inner').innerHTML = banners.map((url, idx) => `
@@ -342,7 +389,7 @@
 
         function renderRooms() {
             const totalRooms = allRoomsData.length;
-            const busyRoomsCount = allRoomsData.filter(r => r.status !== 'Trống').length;
+            const busyRoomsCount = allRoomsData.filter(r => r.status === 'Đang có khách').length;
             const fullAlert = document.getElementById('full-room-alert');
             
             if (totalRooms > 0 && busyRoomsCount === totalRooms) {
@@ -354,25 +401,32 @@
             let filteredRooms = allRoomsData;
             if (currentFilter === 'empty') {
                 filteredRooms = allRoomsData.filter(r => r.status === 'Trống');
+            } else if (currentFilter === 'pending') {
+                filteredRooms = allRoomsData.filter(r => r.status === 'Chờ xác thực');
             } else if (currentFilter === 'busy') {
-                filteredRooms = allRoomsData.filter(r => r.status !== 'Trống');
+                filteredRooms = allRoomsData.filter(r => r.status === 'Đang có khách');
             }
 
             document.getElementById('room-container').innerHTML = filteredRooms.length === 0 ? 
                 `<div class="col-12 text-center text-muted py-4">Không tìm thấy phòng phù hợp với tiêu chí này.</div>` :
                 filteredRooms.map(room => {
-                    const isBusy = room.status !== 'Trống';
+                    let cardClass = 'room-empty';
+                    if (room.status === 'Đang có khách') cardClass = 'room-busy';
+                    else if (room.status === 'Chờ xác thực') cardClass = 'room-pending';
+
                     let dateInfo = '';
                     if(room.booking_dates_arr && room.booking_dates_arr.length > 0) {
                         dateInfo = `<br><small class="text-primary">Ngày: ${room.booking_dates_arr.join(', ')}</small>`;
                     }
+                    const typeLabel = room.booking_type === 'online' ? '<span class="badge bg-info text-dark">Online</span>' : '<span class="badge bg-secondary">Tại quầy</span>';
+
                     return `
                         <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
-                            <div class="card ${isBusy ? 'room-busy' : 'room-empty'} p-3 shadow-sm border" onclick='openRoomAction(${JSON.stringify(room)})'>
+                            <div class="card ${cardClass} p-3 shadow-sm border" onclick='openRoomAction(${JSON.stringify(room)})'>
                                 <h5 class="fw-bold">${room.room_name}</h5>
                                 <p class="mb-1">Giá: ${room.price_per_night.toLocaleString()}đ/đêm</p><hr class="my-1">
-                                <p class="mb-0"><strong>Trạng thái:</strong> ${room.status}</p>
-                                ${isBusy ? `<small class="text-danger mt-1"><b>${room.customer_name}</b><br>Thanh toán: ${room.payment_status}${dateInfo}</small>` : ''}
+                                <p class="mb-0"><strong>Trạng thái:</strong> ${room.status} ${room.status !== 'Trống' ? '(' + typeLabel + ')' : ''}</p>
+                                ${room.status !== 'Trống' ? `<small class="text-danger mt-1"><b>${room.customer_name}</b><br>Thanh toán: ${room.payment_status}${dateInfo}</small>` : ''}
                             </div>
                         </div>
                     `;
@@ -382,21 +436,30 @@
         function openRoomAction(room) {
             const user = JSON.parse(localStorage.getItem('user'));
             if(room.status === 'Trống') {
-                if(!user) {
-                    alert('Chức năng đặt phòng tại quầy chỉ dành cho nhân viên/quản trị viên!');
-                    return;
-                }
                 document.getElementById('b-room-id').value = room.id;
                 document.getElementById('b-room-name').innerText = room.room_name;
                 document.getElementById('default-date').value = new Date().toISOString().split('T')[0];
                 document.getElementById('c-name').value = '';
                 document.getElementById('c-phone').value = '';
                 new bootstrap.Modal(document.getElementById('bookModal')).show();
+            } else if(room.status === 'Chờ xác thực') {
+                // Chỉ nhân viên/admin mới có quyền duyệt/từ chối phòng chờ xác thực
+                if(!user) {
+                    alert('Đơn đặt phòng đang chờ khách sạn xác thực thanh toán chuyển khoản.');
+                    return;
+                }
+                document.getElementById('p-room-name').innerText = room.room_name;
+                document.getElementById('p-customer').innerText = room.customer_name;
+                document.getElementById('p-phone').innerText = room.customer_phone || '---';
+                document.getElementById('p-nights').innerText = room.nights;
+                window.selectedPendingRoomId = room.id;
+                new bootstrap.Modal(document.getElementById('pendingRoomModal')).show();
             } else {
                 document.getElementById('a-room-id').value = room.id;
                 document.getElementById('a-room-name').innerText = room.room_name;
                 document.getElementById('a-customer').innerText = room.customer_name;
                 document.getElementById('a-nights').innerText = room.nights;
+                document.getElementById('a-type-label').innerText = room.booking_type === 'online' ? 'Online' : 'Tại quầy';
                 document.getElementById('a-payment-status').innerText = room.payment_status;
                 document.getElementById('a-payment-method').innerText = room.payment_method === 'chuyen_khoan' ? 'Chuyển khoản' : 'Tiền mặt';
                 
@@ -423,8 +486,8 @@
             const booking_type = document.getElementById('b-type').value;
             const customer_name = document.getElementById('c-name').value;
             const customer_phone = document.getElementById('c-phone').value;
-            const payment_status = document.getElementById('b-payment-status').value;
-            const payment_method = document.getElementById('b-payment-method').value;
+            const payment_status = booking_type === 'online' ? 'Chưa thanh toán' : 'Chưa thanh toán';
+            const payment_method = 'chuyen_khoan';
 
             const dateInputs = document.querySelectorAll('#date-list-container input[type="date"]');
             let booking_dates = [];
@@ -436,7 +499,48 @@
                 body: JSON.stringify({ room_id, booking_type, customer_name, customer_phone, booking_dates, payment_status, payment_method }) 
             });
             const data = await res.json();
-            if(data.success) location.reload(); else alert(data.error);
+            if(data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('bookModal')).hide();
+                if(booking_type === 'online') {
+                    // Hiển thị modal tạm tính bill để khách hàng xem và in PDF thanh toán chuyển khoản
+                    document.getElementById('pre-facility-name').innerText = globalSettings.name || 'KHÁCH SẠN';
+                    document.getElementById('pre-address').innerText = `Địa chỉ: ${globalSettings.address || ''}`;
+                    document.getElementById('pre-phone').innerText = `SĐT: ${globalSettings.phone || ''}`;
+                    document.getElementById('pre-room').innerText = data.preliminaryBill.room_name;
+                    document.getElementById('pre-nights').innerText = data.preliminaryBill.nights;
+                    document.getElementById('pre-qr-img').src = globalSettings.qr_code || '';
+
+                    if(Number(data.preliminaryBill.discountAmount) > 0) {
+                        document.getElementById('pre-discount-row').style.display = 'block';
+                        document.getElementById('pre-discount').innerText = Number(data.preliminaryBill.discountAmount).toLocaleString() + 'đ';
+                    } else {
+                        document.getElementById('pre-discount-row').style.display = 'none';
+                    }
+
+                    let html = `<tr><td>Tiền phòng (${data.preliminaryBill.nights} đêm)</td><td>${data.preliminaryBill.nights}</td><td>-</td><td><b>${Number(data.preliminaryBill.roomTotal).toLocaleString()}đ</b></td></tr>`;
+                    document.getElementById('pre-bill-items').innerHTML = html;
+                    document.getElementById('pre-total').innerText = `TỔNG CỘNG: ${Number(data.preliminaryBill.grandTotal).toLocaleString()}đ (Chuyển khoản)`;
+
+                    new bootstrap.Modal(document.getElementById('preliminaryBillModal')).show();
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert(data.error);
+            }
+        }
+
+        async function verifyBooking(action) {
+            const room_id = window.selectedPendingRoomId;
+            const res = await fetch('/api/rooms/verify', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ room_id, action })
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert(action === 'approve' ? 'Đã xác thực thành công đơn đặt phòng!' : 'Đã từ chối đơn đặt phòng.');
+                location.reload();
+            }
         }
 
         async function updateRoomStatus() {
