@@ -79,7 +79,7 @@
         <div class="row" id="room-container"></div>
     </div>
 
-    <!-- Tab 2: Bảng Giá Dịch Vụ -->
+    <!-- Tab 2: Bảng Giá Dịch Vụ (Tự động phân loại theo danh mục) -->
     <div class="container my-4" id="tab-menu-price" style="display:none;">
         <h3 class="mb-4 fw-bold">Bảng Giá Dịch Vụ & Tiện Ích Khách Sạn</h3>
         <div class="row g-3">
@@ -110,7 +110,7 @@
         </div>
     </div>
 
-    <!-- Modal Đặt Phòng (Chỉ dành cho Nhân viên/Admin) -->
+    <!-- Modal Đặt Phòng -->
     <div class="modal fade" id="bookModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -170,7 +170,6 @@
                     <input type="hidden" id="a-room-id">
                     <p><strong>Khách:</strong> <span id="a-customer"></span> | <strong>Số đêm:</strong> <span id="a-nights"></span> đêm | <strong>Thanh toán tiền phòng:</strong> <span id="a-payment-status" class="badge bg-warning"></span> (<span id="a-payment-method"></span>)</p>
                     
-                    <!-- Khu vực cập nhật trạng thái: Chỉ Nhân viên / Quản trị mới thấy -->
                     <div class="card p-3 bg-light mb-3 staff-only-action" style="display:none;">
                         <h6 class="fw-bold">Cập nhật trạng thái Check-in / Thanh toán:</h6>
                         <div class="row g-2 align-items-end">
@@ -196,7 +195,6 @@
 
                     <hr>
                     <h6 class="fw-bold">Thêm Dịch Vụ / Tiện Ích Phòng</h6>
-                    <!-- Khách hàng và nhân viên đều có quyền thêm dịch vụ -->
                     <div class="row g-2 mb-3">
                         <div class="col-md-6"><select id="menu-select" class="form-select"></select></div>
                         <div class="col-md-3"><input type="number" id="menu-qty" class="form-control" value="1" min="1"></div>
@@ -205,7 +203,6 @@
                     <ul class="list-group mb-3" id="order-list"></ul>
                 </div>
                 
-                <!-- Khu vực Checkout & Hủy phòng: Ẩn hoàn toàn với khách hàng, chỉ hiển thị với Nhân viên / Quản trị -->
                 <div class="modal-footer gap-2 staff-only-action" id="staff-footer-actions" style="display:none;">
                     <div class="flex-grow-1">
                         <label class="small fw-bold">Thanh toán Check-out:</label>
@@ -239,6 +236,7 @@
                     </table>
                 </div>
                 <div class="text-end">
+                    <p class="mb-1" id="bill-discount-row" style="display:none;">Giảm giá: <span id="bill-discount" class="text-success fw-bold">0đ</span></p>
                     <h5 class="fw-bold text-danger" id="bill-total">TỔNG CỘNG: 0đ</h5>
                 </div>
                 <div class="text-center mt-3" id="bill-qr-container">
@@ -307,12 +305,12 @@
                 if (resMenu.ok) {
                     menuData = await resMenu.json();
                     if (Array.isArray(menuData)) {
-                        document.getElementById('menu-select').innerHTML = menuData.map(m => `<option value="${m.id}">[${m.category}] ${m.item_name} (${m.unit}) - ${m.price.toLocaleString()}đ</option>`).join('');
+                        document.getElementById('menu-select').innerHTML = menuData.map(m => `<option value="${m.id}">[${m.category || 'khác'}] ${m.item_name} (${m.unit}) - ${m.price.toLocaleString()}đ</option>`).join('');
 
                         document.getElementById('public-food-table').innerHTML = menuData.filter(m => m.category === 'food').map(f => `<tr><td>${f.item_name}</td><td>${f.unit}</td><td class="fw-bold text-danger">${f.price.toLocaleString()}đ</td></tr>`).join('');
                         document.getElementById('public-drink-table').innerHTML = menuData.filter(m => m.category === 'drink').map(d => `<tr><td>${d.item_name}</td><td>${d.unit}</td><td class="fw-bold text-danger">${d.price.toLocaleString()}đ</td></tr>`).join('');
                         document.getElementById('public-relax-table').innerHTML = menuData.filter(m => m.category === 'relax').map(r => `<tr><td>${r.item_name}</td><td>${r.unit}</td><td class="fw-bold text-danger">${r.price.toLocaleString()}đ</td></tr>`).join('');
-                        document.getElementById('public-other-table').innerHTML = menuData.filter(m => m.category === 'khác').map(o => `<tr><td>${o.item_name}</td><td>${o.unit}</td><td class="fw-bold text-danger">${o.price.toLocaleString()}đ</td></tr>`).join('');
+                        document.getElementById('public-other-table').innerHTML = menuData.filter(m => m.category === 'khác' || !m.category).map(o => `<tr><td>${o.item_name}</td><td>${o.unit}</td><td class="fw-bold text-danger">${o.price.toLocaleString()}đ</td></tr>`).join('');
                     }
                 }
             } catch(e) {}
@@ -489,6 +487,13 @@
                 document.getElementById('bill-room').innerText = data.report.room_name;
                 document.getElementById('bill-nights').innerText = data.report.nights;
                 document.getElementById('bill-qr-img').src = data.setting.qr_code;
+
+                if(Number(data.report.discountAmount) > 0) {
+                    document.getElementById('bill-discount-row').style.display = 'block';
+                    document.getElementById('bill-discount').innerText = Number(data.report.discountAmount).toLocaleString() + 'đ';
+                } else {
+                    document.getElementById('bill-discount-row').style.display = 'none';
+                }
 
                 let html = `<tr><td>Tiền phòng (${data.report.nights} đêm)</td><td>${data.report.nights}</td><td>-</td><td><b>${data.report.isAlreadyPaidRoom ? '0đ (Đã CK trước)' : Number(data.report.roomTotal).toLocaleString() + 'đ'}</b></td></tr>`;
                 
