@@ -21,7 +21,7 @@
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 py-2 shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#"><span id="brand-name">Khách Sạn Biển Xanh</span>[cite: 3]</a>
+            <a class="navbar-brand fw-bold" href="#"><span id="brand-name">Khách Sạn Biển Xanh</span></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -37,12 +37,12 @@
                             <li><a class="dropdown-item" href="#" onclick="filterRooms('busy')">🔴 Đang Có Khách</a></li>
                         </ul>
                     </li>
-                    <li class="nav-item"><a class="nav-link" href="#" id="nav-menu" onclick="switchTab('menu-price')">Bảng Giá Dịch Vụ</a>[cite: 3]</li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="nav-menu" onclick="switchTab('menu-price')">Bảng Giá Dịch Vụ</a></li>
                 </ul>
                 <div class="d-flex align-items-center">
-                    <a href="admin.html" class="btn btn-outline-light btn-sm me-2" id="admin-nav" style="display:none;">Quản Trị</a>[cite: 3]
-                    <button class="btn btn-outline-warning btn-sm" id="login-btn" onclick="openLoginModal()">Đăng Nhập</button>[cite: 3]
-                    <button class="btn btn-outline-danger btn-sm" id="logout-btn" style="display:none;" onclick="logout()">Đăng Xuất</button>[cite: 3]
+                    <a href="admin.html" class="btn btn-outline-light btn-sm me-2" id="admin-nav" style="display:none;">Quản Trị</a>
+                    <button class="btn btn-outline-warning btn-sm" id="login-btn" onclick="openLoginModal()">Đăng Nhập</button>
+                    <button class="btn btn-outline-danger btn-sm" id="logout-btn" style="display:none;" onclick="logout()">Đăng Xuất</button>
                 </div>
             </div>
         </div>
@@ -50,14 +50,14 @@
 
     <!-- Banner Carousel -->
     <div class="container my-3" id="banner-section" style="display:none;">
-        <div id="promo-alert-banner" class="alert alert-warning text-center fw-bold shadow-sm mb-3" style="display:none;"></div>[cite: 3]
+        <div id="promo-alert-banner" class="alert alert-warning text-center fw-bold shadow-sm mb-3" style="display:none;"></div>
         <div id="carouselBanners" class="carousel slide shadow-sm" data-bs-ride="carousel" data-bs-interval="5000">
-            <div class="carousel-inner" id="carousel-inner"></div>[cite: 3]
+            <div class="carousel-inner" id="carousel-inner"></div>
             <button class="carousel-control-prev" type="button" data-bs-target="#carouselBanners" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon"></span>[cite: 3]
+                <span class="carousel-control-prev-icon"></span>
             </button>
             <button class="carousel-control-next" type="button" data-bs-target="#carouselBanners" data-bs-slide="next">
-                <span class="carousel-control-next-icon"></span>[cite: 3]
+                <span class="carousel-control-next-icon"></span>
             </button>
         </div>
     </div>
@@ -65,46 +65,46 @@
     <!-- Tab 1: Sơ đồ phòng -->
     <div class="container my-4" id="tab-rooms">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 id="facility-title" class="fw-bold">Sơ Đồ Phòng Khách Sạn</h3>[cite: 3]
+            <h3 id="facility-title" class="fw-bold">Sơ Đồ Phòng Khách Sạn</h3>
             <div>
-                <span class="badge bg-success p-2 me-2">Phòng Trống</span>[cite: 3]
-                <span class="badge bg-danger p-2">Đang Có Khách</span>[cite: 3]
+                <span class="badge bg-success p-2 me-2">Phòng Trống</span>
+                <span class="badge bg-danger p-2">Đang Có Khách</span>
             </div>
         </div>
         
         <div id="full-room-alert" class="alert alert-danger text-center fw-bold fs-5 shadow-sm mb-3" style="display:none;">
-            ⚠️ Thông báo: Tất cả các phòng hiện tại đã đầy (Full phòng)![cite: 3]
+            ⚠️ Thông báo: Tất cả các phòng hiện tại đã đầy (Full phòng)!
         </div>
 
-        <div class="row" id="room-container"></div>[cite: 3]
+        <div class="row" id="room-container"></div>
     </div>
 
     <!-- Tab 2: Bảng Giá Dịch Vụ -->
     <div class="container my-4" id="tab-menu-price" style="display:none;">
-        <h3 class="mb-4 fw-bold">Bảng Giá Dịch Vụ & Tiện Ích Khách Sạn</h3>[cite: 3]
+        <h3 class="mb-4 fw-bold">Bảng Giá Dịch Vụ & Tiện Ích Khách Sạn</h3>
         <div class="row g-3">
             <div class="col-md-3">
                 <div class="card p-3 shadow-sm bg-white border-0">
-                    <h5 class="text-primary border-bottom pb-2">🍲 Đồ Ăn</h5>[cite: 3]
-                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Món</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-food-table"></tbody></table></div>[cite: 3]
+                    <h5 class="text-primary border-bottom pb-2">🍲 Đồ Ăn</h5>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Món</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-food-table"></tbody></table></div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card p-3 shadow-sm bg-white border-0">
-                    <h5 class="text-success border-bottom pb-2">🍺 Đồ Uống</h5>[cite: 3]
-                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Đồ Uống</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-drink-table"></tbody></table></div>[cite: 3]
+                    <h5 class="text-success border-bottom pb-2">🍺 Đồ Uống</h5>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Đồ Uống</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-drink-table"></tbody></table></div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card p-3 shadow-sm bg-white border-0">
-                    <h5 class="text-info border-bottom pb-2">💆 Thư Giãn (Spa/Massage)</h5>[cite: 3]
-                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Dịch Vụ</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-relax-table"></tbody></table></div>[cite: 3]
+                    <h5 class="text-info border-bottom pb-2">💆 Thư Giãn (Spa/Massage)</h5>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Dịch Vụ</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-relax-table"></tbody></table></div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card p-3 shadow-sm bg-white border-0">
-                    <h5 class="text-warning border-bottom pb-2">📦 Dịch Vụ Khác</h5>[cite: 3]
-                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Dịch Vụ</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-other-table"></tbody></table></div>[cite: 3]
+                    <h5 class="text-warning border-bottom pb-2">📦 Dịch Vụ Khác</h5>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Dịch Vụ</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-other-table"></tbody></table></div>
                 </div>
             </div>
         </div>
@@ -115,45 +115,45 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Đặt Phòng: <span id="b-room-name"></span></h5>[cite: 3]
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>[cite: 3]
+                    <h5 class="modal-title">Đặt Phòng: <span id="b-room-name"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" id="b-room-id">[cite: 3]
+                    <input type="hidden" id="b-room-id">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Hình thức đặt:</label>[cite: 3]
-                        <select id="b-type" class="form-select">[cite: 3]
-                            <option value="counter">Tại quầy (Check-in ngay)</option>[cite: 3]
-                            <option value="online">Đặt trực tuyến (Online)</option>[cite: 3]
+                        <label class="form-label fw-bold">Hình thức đặt:</label>
+                        <select id="b-type" class="form-select">
+                            <option value="counter">Tại quầy (Check-in ngay)</option>
+                            <option value="online">Đặt trực tuyến (Online)</option>
                         </select>
                     </div>
-                    <div class="mb-3"><label class="form-label">Họ tên khách:</label><input type="text" id="c-name" class="form-control" placeholder="Nhập họ tên..."></div>[cite: 3]
-                    <div class="mb-3"><label class="form-label">Số điện thoại:</label><input type="text" id="c-phone" class="form-control" placeholder="Nhập SĐT..."></div>[cite: 3]
+                    <div class="mb-3"><label class="form-label">Họ tên khách:</label><input type="text" id="c-name" class="form-control" placeholder="Nhập họ tên..."></div>
+                    <div class="mb-3"><label class="form-label">Số điện thoại:</label><input type="text" id="c-phone" class="form-control" placeholder="Nhập SĐT..."></div>
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Danh sách ngày ở (mặc định hôm nay):</label>[cite: 3]
-                        <div id="date-list-container" class="d-flex flex-column gap-2">[cite: 3]
-                            <input type="date" id="default-date" class="form-control">[cite: 3]
+                        <label class="form-label fw-bold">Danh sách ngày ở (mặc định hôm nay):</label>
+                        <div id="date-list-container" class="d-flex flex-column gap-2">
+                            <input type="date" id="default-date" class="form-control">
                         </div>
-                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addDateInput()">+ Thêm ngày ở (nếu ở nhiều ngày)</button>[cite: 3]
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addDateInput()">+ Thêm ngày ở (nếu ở nhiều ngày)</button>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Trạng thái thanh toán:</label>[cite: 3]
-                        <select id="b-payment-status" class="form-select">[cite: 3]
-                            <option value="Chưa thanh toán">Chưa thanh toán</option>[cite: 3]
-                            <option value="Đã thanh toán">Đã thanh toán</option>[cite: 3]
+                        <label class="form-label fw-bold">Trạng thái thanh toán:</label>
+                        <select id="b-payment-status" class="form-select">
+                            <option value="Chưa thanh toán">Chưa thanh toán</option>
+                            <option value="Đã thanh toán">Đã thanh toán</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Phương thức thanh toán:</label>[cite: 3]
-                        <select id="b-payment-method" class="form-select">[cite: 3]
-                            <option value="tien_mat">Tiền mặt</option>[cite: 3]
-                            <option value="chuyen_khoan">Chuyển khoản</option>[cite: 3]
+                        <label class="form-label fw-bold">Phương thức thanh toán:</label>
+                        <select id="b-payment-method" class="form-select">
+                            <option value="tien_mat">Tiền mặt</option>
+                            <option value="chuyen_khoan">Chuyển khoản</option>
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-success w-100" onclick="confirmBooking()">Xác Nhận Đặt Phòng</button></div>[cite: 3]
+                <div class="modal-footer"><button class="btn btn-success w-100" onclick="confirmBooking()">Xác Nhận Đặt Phòng</button></div>
             </div>
         </div>
     </div>
@@ -163,59 +163,59 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Phòng: <span id="a-room-name"></span></h5>[cite: 3]
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>[cite: 3]
+                    <h5 class="modal-title">Phòng: <span id="a-room-name"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" id="a-room-id">[cite: 3]
-                    <p><strong>Khách:</strong> <span id="a-customer"></span> | <strong>Số đêm:</strong> <span id="a-nights"></span> đêm | <strong>Thanh toán tiền phòng:</strong> <span id="a-payment-status" class="badge bg-warning"></span> (<span id="a-payment-method"></span>)</p>[cite: 3]
+                    <input type="hidden" id="a-room-id">
+                    <p><strong>Khách:</strong> <span id="a-customer"></span> | <strong>Số đêm:</strong> <span id="a-nights"></span> đêm | <strong>Thanh toán tiền phòng:</strong> <span id="a-payment-status" class="badge bg-warning"></span> (<span id="a-payment-method"></span>)</p>
                     
                     <!-- Khu vực cập nhật trạng thái: Chỉ Nhân viên / Quản trị mới thấy -->
                     <div class="card p-3 bg-light mb-3 staff-only-action" style="display:none;">
-                        <h6 class="fw-bold">Cập nhật trạng thái Check-in / Thanh toán:</h6>[cite: 3]
+                        <h6 class="fw-bold">Cập nhật trạng thái Check-in / Thanh toán:</h6>
                         <div class="row g-2 align-items-end">
                             <div class="col-md-5">
-                                <label class="small">Trạng thái:</label>[cite: 3]
-                                <select id="up-payment-status" class="form-select form-select-sm">[cite: 3]
-                                    <option value="Chưa thanh toán">Chưa thanh toán</option>[cite: 3]
-                                    <option value="Đã thanh toán">Đã thanh toán</option>[cite: 3]
+                                <label class="small">Trạng thái:</label>
+                                <select id="up-payment-status" class="form-select form-select-sm">
+                                    <option value="Chưa thanh toán">Chưa thanh toán</option>
+                                    <option value="Đã thanh toán">Đã thanh toán</option>
                                 </select>
                             </div>
                             <div class="col-md-5">
-                                <label class="small">Hình thức:</label>[cite: 3]
-                                <select id="up-payment-method" class="form-select form-select-sm">[cite: 3]
-                                    <option value="tien_mat">Tiền mặt</option>[cite: 3]
-                                    <option value="chuyen_khoan">Chuyển khoản</option>[cite: 3]
+                                <label class="small">Hình thức:</label>
+                                <select id="up-payment-method" class="form-select form-select-sm">
+                                    <option value="tien_mat">Tiền mặt</option>
+                                    <option value="chuyen_khoan">Chuyển khoản</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <button class="btn btn-primary btn-sm w-100" onclick="updateRoomStatus()">Lưu</button>[cite: 3]
+                                <button class="btn btn-primary btn-sm w-100" onclick="updateRoomStatus()">Lưu</button>
                             </div>
                         </div>
                     </div>
 
                     <hr>
-                    <h6 class="fw-bold">Thêm Dịch Vụ / Tiện Ích Phòng</h6>[cite: 3]
+                    <h6 class="fw-bold">Thêm Dịch Vụ / Tiện Ích Phòng</h6>
                     <!-- Khách hàng và nhân viên đều có quyền thêm dịch vụ -->
                     <div class="row g-2 mb-3">
-                        <div class="col-md-6"><select id="menu-select" class="form-select"></select></div>[cite: 3]
-                        <div class="col-md-3"><input type="number" id="menu-qty" class="form-control" value="1" min="1"></div>[cite: 3]
-                        <div class="col-md-3"><button class="btn btn-primary w-100" onclick="addOrder()">Thêm Dịch Vụ</button></div>[cite: 3]
+                        <div class="col-md-6"><select id="menu-select" class="form-select"></select></div>
+                        <div class="col-md-3"><input type="number" id="menu-qty" class="form-control" value="1" min="1"></div>
+                        <div class="col-md-3"><button class="btn btn-primary w-100" onclick="addOrder()">Thêm Dịch Vụ</button></div>
                     </div>
-                    <ul class="list-group mb-3" id="order-list"></ul>[cite: 3]
+                    <ul class="list-group mb-3" id="order-list"></ul>
                 </div>
                 
                 <!-- Khu vực Checkout & Hủy phòng: Ẩn hoàn toàn với khách hàng, chỉ hiển thị với Nhân viên / Quản trị -->
                 <div class="modal-footer gap-2 staff-only-action" id="staff-footer-actions" style="display:none;">
                     <div class="flex-grow-1">
-                        <label class="small fw-bold">Thanh toán Check-out:</label>[cite: 3]
-                        <select id="checkout-method" class="form-select form-select-sm">[cite: 3]
-                            <option value="tiền mặt">Tiền mặt</option>[cite: 3]
-                            <option value="chuyển khoản">Chuyển khoản</option>[cite: 3]
+                        <label class="small fw-bold">Thanh toán Check-out:</label>
+                        <select id="checkout-method" class="form-select form-select-sm">
+                            <option value="tiền mặt">Tiền mặt</option>
+                            <option value="chuyển khoản">Chuyển khoản</option>
                         </select>
                     </div>
-                    <button class="btn btn-warning mt-4" onclick="checkoutRoom()">Xác Thực Checkout & In Bill</button>[cite: 3]
-                    <button class="btn btn-danger mt-4" onclick="cancelBooking()">Hủy Phòng</button>[cite: 3]
+                    <button class="btn btn-warning mt-4" onclick="checkoutRoom()">Xác Thực Checkout & In Bill</button>
+                    <button class="btn btn-danger mt-4" onclick="cancelBooking()">Hủy Phòng</button>
                 </div>
             </div>
         </div>
@@ -226,27 +226,27 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-4" id="printable-bill">
                 <div class="text-center mb-3">
-                    <h4 class="fw-bold mb-0" id="bill-facility-name">KHÁCH SẠN</h4>[cite: 3]
-                    <small id="bill-address"></small><br><small id="bill-phone"></small>[cite: 3]
+                    <h4 class="fw-bold mb-0" id="bill-facility-name">KHÁCH SẠN</h4>
+                    <small id="bill-address"></small><br><small id="bill-phone"></small>
                     <hr>
-                    <h5 class="fw-bold text-danger">HOÁ ĐƠN THANH TOÁN</h5>[cite: 3]
-                    <p class="mb-1">Phòng: <b id="bill-room"></b> | Số đêm: <span id="bill-nights"></span> đêm</p>[cite: 3]
+                    <h5 class="fw-bold text-danger">HOÁ ĐƠN THANH TOÁN</h5>
+                    <p class="mb-1">Phòng: <b id="bill-room"></b> | Số đêm: <span id="bill-nights"></span> đêm</p>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
-                        <thead><tr><th>Hạng mục</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>[cite: 3]
-                        <tbody id="bill-items"></tbody>[cite: 3]
+                        <thead><tr><th>Hạng mục</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+                        <tbody id="bill-items"></tbody>
                     </table>
                 </div>
                 <div class="text-end">
-                    <h5 class="fw-bold text-danger" id="bill-total">TỔNG CỘNG: 0đ</h5>[cite: 3]
+                    <h5 class="fw-bold text-danger" id="bill-total">TỔNG CỘNG: 0đ</h5>
                 </div>
                 <div class="text-center mt-3" id="bill-qr-container">
-                    <p class="mb-1 small">QR Chuyển khoản:</p><img id="bill-qr-img" src="" style="max-height: 140px;" class="img-fluid">[cite: 3]
+                    <p class="mb-1 small">QR Chuyển khoản:</p><img id="bill-qr-img" src="" style="max-height: 140px;" class="img-fluid">
                 </div>
                 <div class="text-center mt-4 d-print-none">
-                    <button class="btn btn-primary btn-sm me-2" onclick="window.print()">In Hóa Đơn</button>[cite: 3]
-                    <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal" onclick="location.reload()">Đóng</button>[cite: 3]
+                    <button class="btn btn-primary btn-sm me-2" onclick="window.print()">In Hóa Đơn</button>
+                    <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal" onclick="location.reload()">Đóng</button>
                 </div>
             </div>
         </div>
@@ -256,12 +256,12 @@
     <div class="modal fade" id="loginModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Đăng Nhập</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>[cite: 3]
+                <div class="modal-header"><h5 class="modal-title">Đăng Nhập</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
-                    <div class="mb-3"><label>Tài khoản:</label><input type="text" id="log-user" class="form-control" value="admin"></div>[cite: 3]
-                    <div class="mb-3"><label>Mật khẩu:</label><input type="password" id="log-pass" class="form-control" value="123456"></div>[cite: 3]
+                    <div class="mb-3"><label>Tài khoản:</label><input type="text" id="log-user" class="form-control" value="admin"></div>
+                    <div class="mb-3"><label>Mật khẩu:</label><input type="password" id="log-pass" class="form-control" value="123456"></div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-primary w-100" onclick="login()">Đăng Nhập</button></div>[cite: 3]
+                <div class="modal-footer"><button class="btn btn-primary w-100" onclick="login()">Đăng Nhập</button></div>
             </div>
         </div>
     </div>
@@ -524,7 +524,6 @@
                 document.getElementById('logout-btn').style.display = 'inline-block'; 
                 document.getElementById('admin-nav').style.display = 'inline-block';
                 
-                // Hiển thị các tính năng quản trị / nhân viên (bao gồm checkout, hủy phòng, cập nhật trạng thái)
                 staffElements.forEach(el => {
                     if(el.id === 'staff-footer-actions') {
                         el.style.display = 'flex';
@@ -533,7 +532,6 @@
                     }
                 });
             } else {
-                // Khách hàng: Ẩn hoàn toàn các nút checkout, hủy phòng, cập nhật trạng thái
                 staffElements.forEach(el => el.style.display = 'none');
             }
         }
