@@ -223,7 +223,7 @@
         </div>
     </div>
 
-    <!-- Modal Chi Tiết Bill (Đã bổ sung Loại đơn, Giảm giá và In lại bill) -->
+    <!-- Modal Chi Tiết Bill (Hiển thị đầy đủ thông tin khách và CCCD) -->
     <div class="modal fade" id="billsDetailModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
@@ -237,13 +237,15 @@
                             <thead>
                                 <tr>
                                     <th>ID Bill</th>
-                                    <th>Ngày thanh toán</th>
+                                    <th>Ngày</th>
                                     <th>Phòng</th>
+                                    <th>Khách hàng</th>
+                                    <th>CCCD</th>
                                     <th>Loại đơn</th>
                                     <th>Số đêm</th>
                                     <th>Giảm giá</th>
-                                    <th>Tổng thanh toán</th>
-                                    <th>Hình thức</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Thanh toán</th>
                                     <th>Thao tác</th>
                                 </tr>
                             </thead>
@@ -265,6 +267,10 @@
                     <hr>
                     <h5 class="fw-bold text-danger">HOÁ ĐƠN THANH TOÁN (IN LẠI)</h5>
                     <p class="mb-1">Hóa đơn: <b id="reprint-bill-id"></b> | Phòng: <b id="reprint-room"></b> | Số đêm: <span id="reprint-nights"></span> đêm</p>
+                    <div class="text-start border p-2 rounded bg-light mb-2 small">
+                        <p class="mb-1"><strong>Khách hàng:</strong> <span id="reprint-customer"></span></p>
+                        <p class="mb-1"><strong>SĐT:</strong> <span id="reprint-cust-phone"></span> | <strong>CCCD:</strong> <span id="reprint-cust-cccd"></span></p>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
@@ -454,14 +460,16 @@
         }
 
         async function openBillsDetailModal() {
-            document.getElementById('modal-bills-list').innerHTML = cachedBills.length === 0 ? `<tr><td colspan="9" class="text-center text-muted">Không có dữ liệu hóa đơn</td></tr>` :
+            document.getElementById('modal-bills-list').innerHTML = cachedBills.length === 0 ? `<tr><td colspan="11" class="text-center text-muted">Không có dữ liệu hóa đơn</td></tr>` :
                 cachedBills.map(b => {
-                    const bookingTypeText = b.booking_type === 'online' ? '<span class="badge bg-info">Online</span>' : '<span class="badge bg-secondary">Tại quầy</span>';
+                    const bookingTypeText = b.booking_type === 'online' ? '<span class="badge bg-info text-dark">Online</span>' : '<span class="badge bg-secondary">Tại quầy</span>';
                     return `
                         <tr>
                             <td>#${b.id}</td>
                             <td>${b.created_date}</td>
                             <td><b>${b.room_name}</b></td>
+                            <td>${b.customer_name || '---'}</td>
+                            <td>${b.customer_cccd || '---'}</td>
                             <td>${bookingTypeText}</td>
                             <td>${b.nights} đêm</td>
                             <td class="text-success">${Number(b.discount || 0).toLocaleString()}đ</td>
@@ -481,6 +489,9 @@
             document.getElementById('reprint-bill-id').innerText = `#${b.id}`;
             document.getElementById('reprint-room').innerText = b.room_name;
             document.getElementById('reprint-nights').innerText = b.nights;
+            document.getElementById('reprint-customer').innerText = b.customer_name || '---';
+            document.getElementById('reprint-cust-phone').innerText = b.customer_phone || '---';
+            document.getElementById('reprint-cust-cccd').innerText = b.customer_cccd || '---';
             document.getElementById('reprint-bill-qr-img').src = currentSettings.qr_code || '';
 
             if(Number(b.discount || 0) > 0) {
