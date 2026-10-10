@@ -22,15 +22,39 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 py-2 shadow-sm">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" href="#"><span id="brand-name">Khách Sạn Biển Xanh</span></a>
-            <div class="d-flex align-items-center">
-                <a href="admin.html" class="btn btn-outline-light btn-sm me-2" id="admin-nav" style="display:none;">Quản Trị</a>
-                <button class="btn btn-outline-warning btn-sm" id="login-btn" onclick="openLoginModal()">Đăng Nhập</button>
-                <button class="btn btn-outline-danger btn-sm" id="logout-btn" style="display:none;" onclick="logout()">Đăng Xuất</button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-between" id="navbarNav">
+                <ul class="navbar-nav mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link active" href="#" id="nav-rooms" onclick="switchTab('rooms')">Sơ Đồ Phòng</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="nav-menu" onclick="switchTab('menu-price')">Bảng Giá Dịch Vụ</a></li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <a href="admin.html" class="btn btn-outline-light btn-sm me-2" id="admin-nav" style="display:none;">Quản Trị</a>
+                    <button class="btn btn-outline-warning btn-sm" id="login-btn" onclick="openLoginModal()">Đăng Nhập</button>
+                    <button class="btn btn-outline-danger btn-sm" id="logout-btn" style="display:none;" onclick="logout()">Đăng Xuất</button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container my-4">
+    <!-- Banner Carousel tự động chạy 5s mỗi slide -->
+    <div class="container my-3" id="banner-section" style="display:none;">
+        <div id="promo-alert-banner" class="alert alert-warning text-center fw-bold shadow-sm mb-3" style="display:none;"></div>
+        <div id="carouselBanners" class="carousel slide shadow-sm" data-bs-ride="carousel" data-bs-interval="5000">
+            <div class="carousel-inner" id="carousel-inner"></div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carouselBanners" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carouselBanners" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Tab 1: Sơ đồ phòng -->
+    <div class="container my-4" id="tab-rooms">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h3 id="facility-title" class="fw-bold">Sơ Đồ Phòng Khách Sạn</h3>
             <div>
@@ -39,6 +63,37 @@
             </div>
         </div>
         <div class="row" id="room-container"></div>
+    </div>
+
+    <!-- Tab 2: Bảng Giá Dịch Vụ (Ăn / Uống / Thư giãn / Khác) -->
+    <div class="container my-4" id="tab-menu-price" style="display:none;">
+        <h3 class="mb-4 fw-bold">Bảng Giá Dịch Vụ & Tiện Ích Khách Sạn</h3>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="card p-3 shadow-sm bg-white border-0">
+                    <h5 class="text-primary border-bottom pb-2">🍲 Đồ Ăn</h5>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Món</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-food-table"></tbody></table></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 shadow-sm bg-white border-0">
+                    <h5 class="text-success border-bottom pb-2">🍺 Đồ Uống</h5>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Đồ Uống</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-drink-table"></tbody></table></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 shadow-sm bg-white border-0">
+                    <h5 class="text-info border-bottom pb-2">💆 Thư Giãn (Spa/Massage)</h5>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Dịch Vụ</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-relax-table"></tbody></table></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 shadow-sm bg-white border-0">
+                    <h5 class="text-warning border-bottom pb-2">📦 Dịch Vụ Khác</h5>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Tên Dịch Vụ</th><th>ĐV</th><th>Giá</th></tr></thead><tbody id="public-other-table"></tbody></table></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal Đặt Phòng -->
@@ -53,7 +108,7 @@
                     <input type="hidden" id="b-room-id">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Hình thức đặt:</label>
-                        <select id="b-type" class="form-select" onchange="toggleBookingType()">
+                        <select id="b-type" class="form-select">
                             <option value="counter">Tại quầy (Check-in ngay)</option>
                             <option value="online">Đặt trực tuyến (Online)</option>
                         </select>
@@ -65,8 +120,8 @@
                         <label class="form-label fw-bold">Danh sách ngày ở (mặc định hôm nay):</label>
                         <div id="date-list-container" class="d-flex flex-column gap-2">
                             <input type="date" id="default-date" class="form-control">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addDateInput()">+ Thêm ngày ở (nếu đặt nhiều ngày)</button>
                         </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addDateInput()">+ Thêm ngày ở (nếu ở nhiều ngày)</button>
                     </div>
 
                     <div class="mb-3">
@@ -89,7 +144,7 @@
         </div>
     </div>
 
-    <!-- Modal Phòng Đang Có Khách (Quản lý dịch vụ & Check-out) -->
+    <!-- Modal Phòng Đang Có Khách -->
     <div class="modal fade" id="activeRoomModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
@@ -198,41 +253,85 @@
         let menuData = [];
 
         async function init() {
-            const resSet = await fetch('/api/settings');
-            const settings = await resSet.json();
-            if(settings.name) {
-                document.getElementById('brand-name').innerText = settings.name;
-                document.getElementById('page-title').innerText = settings.name;
-            }
+            try {
+                const resSet = await fetch('/api/settings');
+                if (resSet.ok) {
+                    const settings = await resSet.json();
+                    if(settings.name) {
+                        document.getElementById('brand-name').innerText = settings.name;
+                        document.getElementById('page-title').innerText = settings.name;
+                    }
+                    if(settings.promo_text) {
+                        const pAlert = document.getElementById('promo-alert-banner');
+                        pAlert.style.display = 'block';
+                        pAlert.innerText = `🎁 ${settings.promo_text}`;
+                    }
+                    if(settings.banners) {
+                        try {
+                            const banners = JSON.parse(settings.banners);
+                            if(banners.length > 0) {
+                                document.getElementById('banner-section').style.display = 'block';
+                                document.getElementById('carousel-inner').innerHTML = banners.map((url, idx) => `
+                                    <div class="carousel-item ${idx === 0 ? 'active' : ''}">
+                                        <img src="${url}" class="banner-img shadow-sm" alt="Banner">
+                                    </div>
+                                `).join('');
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch(e) {}
 
-            const resMenu = await fetch('/api/menu');
-            menuData = await resMenu.json();
-            document.getElementById('menu-select').innerHTML = menuData.map(m => `<option value="${m.id}">[${m.category}] ${m.item_name} (${m.unit}) - ${m.price.toLocaleString()}đ</option>`).join('');
+            try {
+                const resMenu = await fetch('/api/menu');
+                if (resMenu.ok) {
+                    menuData = await resMenu.json();
+                    if (Array.isArray(menuData)) {
+                        document.getElementById('menu-select').innerHTML = menuData.map(m => `<option value="${m.id}">[${m.category}] ${m.item_name} (${m.unit}) - ${m.price.toLocaleString()}đ</option>`).join('');
+
+                        document.getElementById('public-food-table').innerHTML = menuData.filter(m => m.category === 'food').map(f => `<tr><td>${f.item_name}</td><td>${f.unit}</td><td class="fw-bold text-danger">${f.price.toLocaleString()}đ</td></tr>`).join('');
+                        document.getElementById('public-drink-table').innerHTML = menuData.filter(m => m.category === 'drink').map(d => `<tr><td>${d.item_name}</td><td>${d.unit}</td><td class="fw-bold text-danger">${d.price.toLocaleString()}đ</td></tr>`).join('');
+                        document.getElementById('public-relax-table').innerHTML = menuData.filter(m => m.category === 'relax').map(r => `<tr><td>${r.item_name}</td><td>${r.unit}</td><td class="fw-bold text-danger">${r.price.toLocaleString()}đ</td></tr>`).join('');
+                        document.getElementById('public-other-table').innerHTML = menuData.filter(m => m.category === 'khác').map(o => `<tr><td>${o.item_name}</td><td>${o.unit}</td><td class="fw-bold text-danger">${o.price.toLocaleString()}đ</td></tr>`).join('');
+                    }
+                }
+            } catch(e) {}
 
             loadRooms();
             checkUserRole();
         }
 
+        function switchTab(tab) {
+            document.getElementById('tab-rooms').style.display = tab === 'rooms' ? 'block' : 'none';
+            document.getElementById('tab-menu-price').style.display = tab === 'menu-price' ? 'block' : 'none';
+            document.getElementById('nav-rooms').classList.toggle('active', tab === 'rooms');
+            document.getElementById('nav-menu').classList.toggle('active', tab === 'menu-price');
+        }
+
         async function loadRooms() {
-            const res = await fetch('/api/rooms');
-            const rooms = await res.json();
-            document.getElementById('room-container').innerHTML = rooms.map(room => {
-                const isBusy = room.status !== 'Trống';
-                let dateInfo = '';
-                if(room.booking_dates_arr && room.booking_dates_arr.length > 0) {
-                    dateInfo = `<br><small class="text-primary">Ngày: ${room.booking_dates_arr.join(', ')}</small>`;
+            try {
+                const res = await fetch('/api/rooms');
+                if (res.ok) {
+                    const rooms = await res.json();
+                    document.getElementById('room-container').innerHTML = rooms.map(room => {
+                        const isBusy = room.status !== 'Trống';
+                        let dateInfo = '';
+                        if(room.booking_dates_arr && room.booking_dates_arr.length > 0) {
+                            dateInfo = `<br><small class="text-primary">Ngày: ${room.booking_dates_arr.join(', ')}</small>`;
+                        }
+                        return `
+                            <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                                <div class="card ${isBusy ? 'room-busy' : 'room-empty'} p-3 shadow-sm border" onclick='openRoomAction(${JSON.stringify(room)})'>
+                                    <h5 class="fw-bold">${room.room_name}</h5>
+                                    <p class="mb-1">Giá: ${room.price_per_night.toLocaleString()}đ/đêm</p><hr class="my-1">
+                                    <p class="mb-0"><strong>Trạng thái:</strong> ${room.status}</p>
+                                    ${isBusy ? `<small class="text-danger mt-1"><b>${room.customer_name}</b><br>Thanh toán: ${room.payment_status}${dateInfo}</small>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
                 }
-                return `
-                    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
-                        <div class="card ${isBusy ? 'room-busy' : 'room-empty'} p-3 shadow-sm border" onclick='openRoomAction(${JSON.stringify(room)})'>
-                            <h5 class="fw-bold">${room.room_name}</h5>
-                            <p class="mb-1">Giá: ${room.price_per_night.toLocaleString()}đ/đêm</p><hr class="my-1">
-                            <p class="mb-0"><strong>Trạng thái:</strong> ${room.status}</p>
-                            ${isBusy ? `<small class="text-danger mt-1"><b>${room.customer_name}</b><br>Thanh toán: ${room.payment_status}${dateInfo}</small>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            } catch(e) {}
         }
 
         function openRoomAction(room) {
@@ -339,6 +438,7 @@
                 
                 data.report.foodItems.forEach(i => html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${(i.total_price/i.quantity).toLocaleString()}đ</td><td>${i.total_price.toLocaleString()}đ</td></tr>`);
                 data.report.drinkItems.forEach(i => html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${(i.total_price/i.quantity).toLocaleString()}đ</td><td>${i.total_price.toLocaleString()}đ</td></tr>`);
+                data.report.relaxItems.forEach(i => html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${(i.total_price/i.quantity).toLocaleString()}đ</td><td>${i.total_price.toLocaleString()}đ</td></tr>`);
                 data.report.otherItems.forEach(i => html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${(i.total_price/i.quantity).toLocaleString()}đ</td><td>${i.total_price.toLocaleString()}đ</td></tr>`);
 
                 document.getElementById('bill-items').innerHTML = html;
