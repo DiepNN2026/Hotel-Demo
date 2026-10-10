@@ -81,11 +81,20 @@
                 </div>
             </div>
 
-            <!-- Dịch vụ (Thêm danh mục Thư giãn) -->
+            <!-- Dịch vụ (Thêm chọn nhanh từ Kho Hàng) -->
             <div class="tab-pane fade" id="menu-tab">
                 <div class="row">
                     <div class="col-md-5 card p-4">
                         <h4 class="mb-3">Thêm / Sửa Dịch Vụ</h4>
+                        
+                        <!-- Ô chọn nhanh từ kho hàng -->
+                        <div class="mb-3 p-2 bg-light border rounded">
+                            <label class="form-label fw-bold text-primary small">⚡ Chọn nhanh từ Kho Hàng:</label>
+                            <select id="select-from-inventory" class="form-select form-select-sm" onchange="fillServiceFromInventory()">
+                                <option value="">-- Chọn hàng từ kho để điền nhanh --</option>
+                            </select>
+                        </div>
+
                         <input type="hidden" id="m-id">
                         <div class="mb-3"><label>Tên dịch vụ:</label><input type="text" id="m-name" class="form-control"></div>
                         <div class="mb-3"><label>Danh mục:</label>
@@ -99,6 +108,7 @@
                         <div class="mb-3"><label>Đơn vị:</label><input type="text" id="m-unit" class="form-control" placeholder="chai, suất, đĩa..."></div>
                         <div class="mb-3"><label>Giá Bán (VNĐ):</label><input type="number" id="m-price" class="form-control"></div>
                         <button class="btn btn-success" onclick="saveMenu()">Lưu Lại</button>
+                        <button class="btn btn-secondary ms-2" onclick="resetMenuForm()" style="display:none;" id="m-cancel">Hủy</button>
                     </div>
                     <div class="col-md-7">
                         <table class="table table-bordered bg-white">
@@ -257,6 +267,7 @@
         let cachedInventory = [];
         let cachedExpenses = [];
         let cachedBills = [];
+        let cachedInventoryForMenu = [];
 
         function checkStaffRole() {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -298,11 +309,29 @@
             const mRes = await fetch('/api/menu');
             const menu = await mRes.json();
             document.getElementById('menu-table').innerHTML = menu.map(m => `
-                <tr><td>${m.item_name}</td><td>${m.category}</td><td>${m.unit}</td><td>${m.price.toLocaleString()}đ</td><td><button class="btn btn-sm btn-danger" onclick="deleteMenu(${m.id})">Xóa</button></td></tr>
+                <tr>
+                    <td>${m.item_name}</td>
+                    <td>${m.category}</td>
+                    <td>${m.unit}</td>
+                    <td>${m.price.toLocaleString()}đ</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning me-1" onclick='editMenu(${JSON.stringify(m)})'>Sửa</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteMenu(${m.id})">Xóa</button>
+                    </td>
+                </tr>
             `).join('');
 
             const iRes = await fetch('/api/inventory');
             cachedInventory = await iRes.json();
+            cachedInventoryForMenu = cachedInventory;
+            
+            // Cập nhật dropdown chọn nhanh từ kho hàng vào form dịch vụ
+            const selectEl = document.getElementById('select-from-inventory');
+            if(selectEl) {
+                selectEl.innerHTML = `<option value="">-- Chọn hàng từ kho để điền nhanh --</option>` + 
+                    cachedInventoryForMenu.map(i => `<option value="${i.id}">${i.item_name} (${i.unit}) - Tồn: ${i.quantity}</option>`).join('');
+            }
+
             let totalInvVal = 0;
             document.getElementById('inventory-table').innerHTML = cachedInventory.map(i => {
                 const totalItemVal = i.quantity * i.import_price;
@@ -343,6 +372,18 @@
             }
 
             loadReport();
+        }
+
+        // Hàm điền nhanh thông tin từ kho vào form dịch vụ
+        function fillServiceFromInventory() {
+            const id = document.getElementById('select-from-inventory').value;
+            if(!id) return;
+            const item = cachedInventoryForMenu.find(i => i.id == id);
+            if(item) {
+                document.getElementById('m-name').value = item.item_name || '';
+                document.getElementById('m-cat').value = item.category || 'food';
+                document.getElementById('m-unit').value = item.unit || '';
+            }
         }
 
         async function loadReport() {
@@ -432,7 +473,24 @@
                     price: document.getElementById('m-price').value
                 })
             });
-            alert('Lưu dịch vụ thành công!'); loadAll();
+            alert('Lưu dịch vụ thành công!'); resetMenuForm(); loadAll();
+        }
+        function editMenu(m) {
+            document.getElementById('m-id').value = m.id;
+            document.getElementById('m-name').value = m.item_name;
+            document.getElementById('m-cat').value = m.category;
+            document.getElementById('m-unit').value = m.unit;
+            document.getElementById('m-price').value = m.price;
+            document.getElementById('m-cancel').style.display = 'inline-block';
+        }
+        function resetMenuForm() {
+            document.getElementById('m-id').value = '';
+            document.getElementById('m-name').value = '';
+            document.getElementById('m-cat').value = 'food';
+            document.getElementById('m-unit').value = '';
+            document.getElementById('m-price').value = '';
+            document.getElementById('m-cancel').style.display = 'none';
+            document.getElementById('select-from-inventory').value = '';
         }
         async function deleteMenu(id) { if(confirm('Xóa dịch vụ này?')) { await fetch(`/api/menu/${id}`, { method: 'DELETE' }); loadAll(); } }
 
