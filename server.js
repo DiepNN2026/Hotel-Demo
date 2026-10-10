@@ -51,6 +51,7 @@ const initDatabase = async () => {
             booking_type TEXT,
             customer_name TEXT,
             customer_phone TEXT,
+            customer_cccd TEXT,
             payment_status TEXT DEFAULT 'Chưa thanh toán',
             payment_method TEXT,
             start_date TEXT,
@@ -87,6 +88,9 @@ const initDatabase = async () => {
         await pool.query(`CREATE TABLE IF NOT EXISTS bills (
             id SERIAL PRIMARY KEY,
             room_name TEXT,
+            customer_name TEXT,
+            customer_phone TEXT,
+            customer_cccd TEXT,
             nights INTEGER,
             room_total REAL,
             service_total REAL,
@@ -217,18 +221,16 @@ app.delete('/api/rooms/:id', async (req, res) => {
 });
 
 app.post('/api/rooms/book', async (req, res) => {
-    const { room_id, booking_type, customer_name, customer_phone, booking_dates, payment_status, payment_method } = req.body;
+    const { room_id, booking_type, customer_name, customer_phone, customer_cccd, booking_dates, payment_status, payment_method } = req.body;
     try {
         const todayStr = new Date().toISOString().split('T')[0];
         let datesArr = Array.isArray(booking_dates) && booking_dates.length > 0 ? booking_dates : [todayStr];
         
-        // Nếu là đặt online thì trạng thái ban đầu là "Chờ xác thực" (màu vàng)
         const roomStatus = (booking_type === 'online') ? 'Chờ xác thực' : 'Đang có khách';
 
-        await pool.query(`UPDATE rooms SET status = $1, booking_type = $2, customer_name = $3, customer_phone = $4, booking_dates = $5, payment_status = $6, payment_method = $7, start_date = $8 WHERE id = $9`, 
-            [roomStatus, booking_type || 'counter', customer_name || 'Khách lẻ', customer_phone || '', JSON.stringify(datesArr), payment_status || 'Chưa thanh toán', payment_method || 'chuyen_khoan', datesArr[0], room_id]);
+        await pool.query(`UPDATE rooms SET status = $1, booking_type = $2, customer_name = $3, customer_phone = $4, customer_cccd = $5, booking_dates = $6, payment_status = $7, payment_method = $8, start_date = $9 WHERE id = $10`, 
+            [roomStatus, booking_type || 'counter', customer_name || 'Khách lẻ', customer_phone || '', customer_cccd || '', JSON.stringify(datesArr), payment_status || 'Chưa thanh toán', payment_method || 'chuyen_khoan', datesArr[0], room_id]);
         
-        // Lấy thông tin tính toán tạm tính bill nếu là online để trả về
         const settingRes = await pool.query(`SELECT * FROM settings LIMIT 1`);
         const setting = settingRes.rows[0];
         const roomRes = await pool.query(`SELECT * FROM rooms WHERE id = $1`, [room_id]);
@@ -245,6 +247,9 @@ app.post('/api/rooms/book', async (req, res) => {
             setting: setting || {},
             preliminaryBill: {
                 room_name: room.room_name,
+                customer_name: room.customer_name,
+                customer_phone: room.customer_phone,
+                customer_cccd: room.customer_cccd,
                 nights,
                 roomTotal: roomTotal.toFixed(0),
                 discountAmount: discountAmount.toFixed(0),
@@ -255,12 +260,12 @@ app.post('/api/rooms/book', async (req, res) => {
 });
 
 app.post('/api/rooms/verify', async (req, res) => {
-    const { room_id, action } = req.body; // action: 'approve' hoặc 'reject'
+    const { room_id, action } = req.body;
     try {
         if (action === 'approve') {
             await pool.query(`UPDATE rooms SET status = 'Đang có khách', payment_status = 'Đã thanh toán' WHERE id = $1`, [room_id]);
         } else {
-            await pool.query(`UPDATE rooms SET status = 'Trống', booking_type = NULL, customer_name = NULL, customer_phone = NULL, payment_status = 'Chưa thanh toán', payment_method = NULL, start_date = NULL, booking_dates = '[]' WHERE id = $1`, [room_id]);
+            await pool.query(`UPDATE rooms SET status = 'Trống', booking_type = NULL, customer_name = NULL, customer_phone = NULL, customer_cccd = NULL, payment_status = 'Chưa thanh toán', payment_method = NULL, start_date = NULL, booking_dates = '[]' WHERE id = $1`, [room_id]);
         }
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -277,7 +282,7 @@ app.post('/api/rooms/update-status', async (req, res) => {
 app.post('/api/rooms/cancel-booking', async (req, res) => {
     const { room_id } = req.body;
     try {
-        await pool.query(`UPDATE rooms SET status = 'Trống', booking_type = NULL, customer_name = NULL, customer_phone = NULL, payment_status = 'Chưa thanh toán', payment_method = NULL, start_date = NULL, booking_dates = '[]' WHERE id = $1`, [room_id]);
+        await pool.query(`UPDATE rooms SET status = 'Trống', booking_type = NULL, customer_name = NULL, customer_phone = NULL, customer_cccd = NULL, payment_status = 'Chưa thanh toán', payment_method = NULL, start_date = NULL, booking_dates = '[]' WHERE id = $1`, [room_id]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -320,14 +325,14 @@ app.post('/api/rooms/checkout', async (req, res) => {
         const totalImportCost = orderItems.reduce((sum, item) => sum + (item.import_price * item.quantity), 0);
         const currentDate = new Date().toISOString().split('T')[0];
 
-        await pool.query(`INSERT INTO bills (room_name, nights, room_total, service_total, grand_total, paid_room_amount, payment_method, total_import_cost, items_detail, created_date, booking_type, discount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-            [room.room_name, nights, roomTotal, serviceTotal, grandTotal, paidRoomAmount, final_payment_method || room.payment_method || 'tiền mặt', totalImportCost, JSON.stringify(orderItems), currentDate, room.booking_type || 'counter', discountAmount]);
+        await pool.query(`INSERT INTO bills (room_name, customer_name, customer_phone, customer_cccd, nights, room_total, service_total, grand_total, paid_room_amount, payment_method, total_import_cost, items_detail, created_date, booking_type, discount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            [room.room_name, room.customer_name, room.customer_phone, room.customer_cccd, nights, roomTotal, serviceTotal, grandTotal, paidRoomAmount, final_payment_method || room.payment_method || 'tiền mặt', totalImportCost, JSON.stringify(orderItems), currentDate, room.booking_type || 'counter', discountAmount]);
         
         for (const item of orderItems) {
             await pool.query(`UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE item_name = $2`, [item.quantity, item.item_name]);
         }
 
-        await pool.query(`UPDATE rooms SET status = 'Trống', booking_type = NULL, customer_name = NULL, customer_phone = NULL, payment_status = 'Chưa thanh toán', payment_method = NULL, start_date = NULL, booking_dates = '[]' WHERE id = $1`, [room_id]);
+        await pool.query(`UPDATE rooms SET status = 'Trống', booking_type = NULL, customer_name = NULL, customer_phone = NULL, customer_cccd = NULL, payment_status = 'Chưa thanh toán', payment_method = NULL, start_date = NULL, booking_dates = '[]' WHERE id = $1`, [room_id]);
         await pool.query(`DELETE FROM orders WHERE room_id = $1`, [room_id]);
 
         res.json({
@@ -335,6 +340,9 @@ app.post('/api/rooms/checkout', async (req, res) => {
             setting: setting || {},
             report: {
                 room_name: room.room_name,
+                customer_name: room.customer_name,
+                customer_phone: room.customer_phone,
+                customer_cccd: room.customer_cccd,
                 nights,
                 price_per_night: room.price_per_night,
                 roomTotal: roomTotal.toFixed(0),
@@ -505,7 +513,8 @@ app.get('/api/reports/export-excel', async (req, res) => {
         const wsBills = workbook.addWorksheet('ChiTiet_HoaDon');
         wsBills.columns = [
             { header: 'ID', key: 'id', width: 8 }, { header: 'Ngày', key: 'created_date', width: 12 },
-            { header: 'Phòng', key: 'room_name', width: 15 }, { header: 'Loại đơn', key: 'booking_type', width: 12 },
+            { header: 'Phòng', key: 'room_name', width: 15 }, { header: 'Khách hàng', key: 'customer_name', width: 20 },
+            { header: 'CCCD', key: 'customer_cccd', width: 15 }, { header: 'Loại đơn', key: 'booking_type', width: 12 },
             { header: 'Số đêm', key: 'nights', width: 8 }, { header: 'Giảm giá', key: 'discount', width: 12 },
             { header: 'Tổng thanh toán', key: 'grand_total', width: 18 }, { header: 'Thanh toán', key: 'payment_method', width: 15 }
         ];
