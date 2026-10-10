@@ -95,7 +95,9 @@ const initDatabase = async () => {
             payment_method TEXT,
             total_import_cost REAL,
             items_detail TEXT,
-            created_date TEXT
+            created_date TEXT,
+            booking_type TEXT,
+            discount REAL DEFAULT 0
         )`);
 
         await pool.query(`CREATE TABLE IF NOT EXISTS expenses (
@@ -259,7 +261,12 @@ app.post('/api/rooms/checkout', async (req, res) => {
         let datesArr = [];
         try { datesArr = JSON.parse(room.booking_dates || '[]'); } catch(e) {}
         const nights = Math.max(1, datesArr.length);
-        const roomTotal = nights * room.price_per_night;
+        let roomTotal = nights * room.price_per_night;
+
+        const isOnline = room.booking_type === 'online';
+        const discountPercent = isOnline ? (setting.promo_discount || 0) : 0;
+        const discountAmount = (roomTotal * discountPercent) / 100;
+        roomTotal = roomTotal - discountAmount;
 
         const isAlreadyPaidRoom = room.payment_status === 'Đã thanh toán' && room.payment_method === 'chuyen_khoan';
         const paidRoomAmount = isAlreadyPaidRoom ? roomTotal : 0;
@@ -270,7 +277,7 @@ app.post('/api/rooms/checkout', async (req, res) => {
         const foodItems = orderItems.filter(i => i.category === 'food');
         const drinkItems = orderItems.filter(i => i.category === 'drink');
         const relaxItems = orderItems.filter(i => i.category === 'relax');
-        const otherItems = orderItems.filter(i => i.category === 'khác');
+        const otherItems = orderItems.filter(i => i.category === 'khác' || !i.category);
 
         const serviceTotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
         const grandTotal = (isAlreadyPaidRoom ? 0 : roomTotal) + serviceTotal;
@@ -278,8 +285,8 @@ app.post('/api/rooms/checkout', async (req, res) => {
         const totalImportCost = orderItems.reduce((sum, item) => sum + (item.import_price * item.quantity), 0);
         const currentDate = new Date().toISOString().split('T')[0];
 
-        await pool.query(`INSERT INTO bills (room_name, nights, room_total, service_total, grand_total, paid_room_amount, payment_method, total_import_cost, items_detail, created_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-            [room.room_name, nights, roomTotal, serviceTotal, grandTotal, paidRoomAmount, final_payment_method || room.payment_method || 'tiền mặt', totalImportCost, JSON.stringify(orderItems), currentDate]);
+        await pool.query(`INSERT INTO bills (room_name, nights, room_total, service_total, grand_total, paid_room_amount, payment_method, total_import_cost, items_detail, created_date, booking_type, discount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            [room.room_name, nights, roomTotal, serviceTotal, grandTotal, paidRoomAmount, final_payment_method || room.payment_method || 'tiền mặt', totalImportCost, JSON.stringify(orderItems), currentDate, room.booking_type || 'counter', discountAmount]);
         
         for (const item of orderItems) {
             await pool.query(`UPDATE inventory SET quantity = GREATEST(0, quantity - $1) WHERE item_name = $2`, [item.quantity, item.item_name]);
@@ -296,6 +303,8 @@ app.post('/api/rooms/checkout', async (req, res) => {
                 nights,
                 price_per_night: room.price_per_night,
                 roomTotal: roomTotal.toFixed(0),
+                discountAmount: discountAmount.toFixed(0),
+                booking_type: room.booking_type || 'counter',
                 isAlreadyPaidRoom,
                 paidRoomAmount: paidRoomAmount.toFixed(0),
                 foodItems,
@@ -318,8 +327,9 @@ app.get('/api/menu', async (req, res) => {
 app.post('/api/menu/save', async (req, res) => {
     const { id, item_name, category, unit, import_price, price } = req.body;
     try {
-        if(id) await pool.query(`UPDATE menu SET item_name = $1, category = $2, unit = $3, import_price = $4, price = $5 WHERE id = $6`, [item_name, category, unit, import_price || 0, price, id]);
-        else await pool.query(`INSERT INTO menu (item_name, category, unit, import_price, price) VALUES ($1, $2, $3, $4, $5)`, [item_name, category, unit, import_price || 0, price]);
+        const cat = category || 'khác';
+        if(id) await pool.query(`UPDATE menu SET item_name = $1, category = $2, unit = $3, import_price = $4, price = $5 WHERE id = $6`, [item_name, cat, unit, import_price || 0, price, id]);
+        else await pool.query(`INSERT INTO menu (item_name, category, unit, import_price, price) VALUES ($1, $2, $3, $4, $5)`, [item_name, cat, unit, import_price || 0, price]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -336,9 +346,10 @@ app.get('/api/inventory', async (req, res) => {
 app.post('/api/inventory/save', async (req, res) => {
     const { id, item_name, category, quantity, unit, import_price } = req.body;
     const currentDate = new Date().toISOString().split('T')[0];
+    const cat = category || 'khác';
     try {
-        if (id) await pool.query(`UPDATE inventory SET item_name = $1, category = $2, quantity = $3, unit = $4, import_price = $5 WHERE id = $6`, [item_name, category, quantity, unit, import_price, id]);
-        else await pool.query(`INSERT INTO inventory (item_name, category, quantity, unit, import_price, import_date) VALUES ($1, $2, $3, $4, $5, $6)`, [item_name, category, quantity, unit, import_price, currentDate]);
+        if (id) await pool.query(`UPDATE inventory SET item_name = $1, category = $2, quantity = $3, unit = $4, import_price = $5 WHERE id = $6`, [item_name, cat, quantity, unit, import_price, id]);
+        else await pool.query(`INSERT INTO inventory (item_name, category, quantity, unit, import_price, import_date) VALUES ($1, $2, $3, $4, $5, $6)`, [item_name, cat, quantity, unit, import_price, currentDate]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -461,8 +472,8 @@ app.get('/api/reports/export-excel', async (req, res) => {
         const wsBills = workbook.addWorksheet('ChiTiet_HoaDon');
         wsBills.columns = [
             { header: 'ID', key: 'id', width: 8 }, { header: 'Ngày', key: 'created_date', width: 12 },
-            { header: 'Phòng', key: 'room_name', width: 15 }, { header: 'Số đêm', key: 'nights', width: 8 },
-            { header: 'Tiền phòng', key: 'room_total', width: 15 }, { header: 'Tiền dịch vụ', key: 'service_total', width: 15 },
+            { header: 'Phòng', key: 'room_name', width: 15 }, { header: 'Loại đơn', key: 'booking_type', width: 12 },
+            { header: 'Số đêm', key: 'nights', width: 8 }, { header: 'Giảm giá', key: 'discount', width: 12 },
             { header: 'Tổng thanh toán', key: 'grand_total', width: 18 }, { header: 'Thanh toán', key: 'payment_method', width: 15 }
         ];
         (billRes.rows || []).forEach(b => wsBills.addRow(b));
