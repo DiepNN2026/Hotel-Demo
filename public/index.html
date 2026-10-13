@@ -114,7 +114,7 @@
         </div>
     </div>
 
-    <!-- Modal Đặt Phòng (Bổ sung nhập CCCD) -->
+    <!-- Modal Đặt Phòng -->
     <div class="modal fade" id="bookModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -148,7 +148,7 @@
         </div>
     </div>
 
-    <!-- Modal Tạm Tính Bill (Hiển thị đầy đủ thông tin khách và hỗ trợ tải PDF) -->
+    <!-- Modal Tạm Tính Bill -->
     <div class="modal fade" id="preliminaryBillModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-4" id="printable-preliminary-bill">
@@ -270,7 +270,7 @@
         </div>
     </div>
 
-    <!-- Modal In Bill (Hiển thị thông tin khách hàng trên hóa đơn) -->
+    <!-- Modal In Bill -->
     <div class="modal fade" id="billModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-4" id="printable-bill">
@@ -462,7 +462,7 @@
                 document.getElementById('p-customer').innerText = room.customer_name;
                 document.getElementById('p-phone').innerText = room.customer_phone || '---';
                 document.getElementById('p-cccd').innerText = room.customer_cccd || '---';
-                document.getElementById('p-nights').innerText = room.nights;
+                document.getElementById('p-nights').innerText = room.nights || (room.booking_dates_arr ? room.booking_dates_arr.length : 1);
                 window.selectedPendingRoomId = room.id;
                 new bootstrap.Modal(document.getElementById('pendingRoomModal')).show();
             } else {
@@ -470,7 +470,7 @@
                 document.getElementById('a-room-name').innerText = room.room_name;
                 document.getElementById('a-customer').innerText = room.customer_name;
                 document.getElementById('a-cccd').innerText = room.customer_cccd || '---';
-                document.getElementById('a-nights').innerText = room.nights;
+                document.getElementById('a-nights').innerText = room.nights || (room.booking_dates_arr ? room.booking_dates_arr.length : 1);
                 document.getElementById('a-type-label').innerText = room.booking_type === 'online' ? 'Online' : 'Tại quầy';
                 document.getElementById('a-payment-status').innerText = room.payment_status;
                 document.getElementById('a-payment-method').innerText = room.payment_method === 'chuyen_khoan' ? 'Chuyển khoản' : 'Tiền mặt';
@@ -582,7 +582,7 @@
             const res = await fetch(`/api/orders/${roomId}`);
             const orders = await res.json();
             document.getElementById('order-list').innerHTML = orders.length === 0 ? `<li class="list-group-item text-muted">Chưa dùng dịch vụ phát sinh</li>` : 
-                orders.map(o => `<li class="list-group-item d-flex justify-content-between"><span>[${o.category}] ${o.item_name} (x${o.quantity} ${o.unit})</span><span>${o.total_price.toLocaleString()}đ</span></li>`).join('');
+                orders.map(o => `<li class="list-group-item d-flex justify-content-between"><span>[${o.category || 'khác'}] ${o.item_name} (x${o.quantity} ${o.unit || ''})</span><span>${o.total_price.toLocaleString()}đ</span></li>`).join('');
         }
 
         async function addOrder() {
@@ -597,38 +597,61 @@
         async function checkoutRoom() {
             const room_id = document.getElementById('a-room-id').value;
             const final_payment_method = document.getElementById('checkout-method').value;
-            const res = await fetch('/api/rooms/checkout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ room_id, final_payment_method }) });
-            const data = await res.json();
-            if(data.success) {
-                document.getElementById('bill-facility-name').innerText = data.setting.name;
-                document.getElementById('bill-address').innerText = `Địa chỉ: ${data.setting.address}`;
-                document.getElementById('bill-phone').innerText = `SĐT: ${data.setting.phone}`;
-                document.getElementById('bill-room').innerText = data.report.room_name;
-                document.getElementById('bill-nights').innerText = data.report.nights;
-                document.getElementById('bill-customer').innerText = data.report.customer_name || '---';
-                document.getElementById('bill-cust-phone').innerText = data.report.customer_phone || '---';
-                document.getElementById('bill-cust-cccd').innerText = data.report.customer_cccd || '---';
-                document.getElementById('bill-qr-img').src = data.setting.qr_code;
-
-                if(Number(data.report.discountAmount) > 0) {
-                    document.getElementById('bill-discount-row').style.display = 'block';
-                    document.getElementById('bill-discount').innerText = Number(data.report.discountAmount).toLocaleString() + 'đ';
-                } else {
-                    document.getElementById('bill-discount-row').style.display = 'none';
-                }
-
-                let html = `<tr><td>Tiền phòng (${data.report.nights} đêm)</td><td>${data.report.nights}</td><td>-</td><td><b>${data.report.isAlreadyPaidRoom ? '0đ (Đã CK trước)' : Number(data.report.roomTotal).toLocaleString() + 'đ'}</b></td></tr>`;
+            
+            try {
+                const res = await fetch('/api/rooms/checkout', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ room_id, final_payment_method }) 
+                });
+                const data = await res.json();
                 
-                data.report.foodItems.forEach(i => html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${(i.total_price/i.quantity).toLocaleString()}đ</td><td>${i.total_price.toLocaleString()}đ</td></tr>`);
-                data.report.drinkItems.forEach(i => html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${(i.total_price/i.quantity).toLocaleString()}đ</td><td>${i.total_price.toLocaleString()}đ</td></tr>`);
-                data.report.relaxItems.forEach(i => html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${(i.total_price/i.quantity).toLocaleString()}đ</td><td>${i.total_price.toLocaleString()}đ</td></tr>`);
-                data.report.otherItems.forEach(i => html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit}</td><td>${(i.total_price/i.quantity).toLocaleString()}đ</td><td>${i.total_price.toLocaleString()}đ</td></tr>`);
+                if(data.success) {
+                    document.getElementById('bill-facility-name').innerText = data.setting?.name || 'KHÁCH SẠN';
+                    document.getElementById('bill-address').innerText = `Địa chỉ: ${data.setting?.address || ''}`;
+                    document.getElementById('bill-phone').innerText = `SĐT: ${data.setting?.phone || ''}`;
+                    document.getElementById('bill-room').innerText = data.report.room_name;
+                    document.getElementById('bill-nights').innerText = data.report.nights;
+                    document.getElementById('bill-customer').innerText = data.report.customer_name || '---';
+                    document.getElementById('bill-cust-phone').innerText = data.report.customer_phone || '---';
+                    document.getElementById('bill-cust-cccd').innerText = data.report.customer_cccd || '---';
+                    document.getElementById('bill-qr-img').src = data.setting?.qr_code || '';
 
-                document.getElementById('bill-items').innerHTML = html;
-                document.getElementById('bill-total').innerText = `TỔNG CỘNG: ${Number(data.report.grandTotal).toLocaleString()}đ (${final_payment_method})`;
+                    if(Number(data.report.discountAmount || 0) > 0) {
+                        document.getElementById('bill-discount-row').style.display = 'block';
+                        document.getElementById('bill-discount').innerText = Number(data.report.discountAmount).toLocaleString() + 'đ';
+                    } else {
+                        document.getElementById('bill-discount-row').style.display = 'none';
+                    }
 
-                bootstrap.Modal.getInstance(document.getElementById('activeRoomModal')).hide();
-                new bootstrap.Modal(document.getElementById('billModal')).show();
+                    let html = `<tr><td>Tiền phòng (${data.report.nights} đêm)</td><td>${data.report.nights}</td><td>-</td><td><b>${data.report.isAlreadyPaidRoom ? '0đ (Đã CK trước)' : Number(data.report.roomTotal || 0).toLocaleString() + 'đ'}</b></td></tr>`;
+                    
+                    const allItems = [
+                        ...(data.report.foodItems || []),
+                        ...(data.report.drinkItems || []),
+                        ...(data.report.relaxItems || []),
+                        ...(data.report.otherItems || [])
+                    ];
+
+                    allItems.forEach(i => {
+                        const unitPrice = i.quantity > 0 ? (i.total_price / i.quantity) : 0;
+                        html += `<tr><td>${i.item_name}</td><td>${i.quantity} ${i.unit || ''}</td><td>${unitPrice.toLocaleString()}đ</td><td>${Number(i.total_price).toLocaleString()}đ</td></tr>`;
+                    });
+
+                    document.getElementById('bill-items').innerHTML = html;
+                    document.getElementById('bill-total').innerText = `TỔNG CỘNG: ${Number(data.report.grandTotal || 0).toLocaleString()}đ (${final_payment_method})`;
+
+                    const activeModalEl = document.getElementById('activeRoomModal');
+                    const activeModalInstance = bootstrap.Modal.getInstance(activeModalEl);
+                    if (activeModalInstance) activeModalInstance.hide();
+
+                    new bootstrap.Modal(document.getElementById('billModal')).show();
+                } else {
+                    alert(data.error || 'Lỗi khi checkout phòng');
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Có lỗi xảy ra khi thực hiện checkout!');
             }
         }
 
