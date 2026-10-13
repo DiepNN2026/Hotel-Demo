@@ -287,7 +287,7 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// HOÀN THIỆN: API Checkout Phòng & In Bill
+// Checkout Phòng & In Bill (Đã lược bỏ cột booking_type để tương thích DB)
 app.post('/api/rooms/checkout', async (req, res) => {
     const { room_id, final_payment_method } = req.body;
     try {
@@ -311,14 +311,13 @@ app.post('/api/rooms/checkout', async (req, res) => {
 
         const itemsDetail = JSON.stringify(orders || []);
 
-        // Lưu vào lịch sử hóa đơn
+        // Lưu vào lịch sử hóa đơn (Không chứa booking_type để tránh lỗi)
         await supabase.from('bills').insert([{
             created_date: new Date().toISOString().split('T')[0],
             room_name: room.room_name,
             customer_name: room.customer_name,
             customer_phone: room.customer_phone,
             customer_cccd: room.customer_cccd,
-            booking_type: room.booking_type || 'counter',
             nights,
             discount: 0,
             room_total: roomTotal,
