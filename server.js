@@ -287,7 +287,7 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// Checkout Phòng & In Bill (Đã lược bỏ cột booking_type để tương thích DB)
+// Checkout Phòng & In Bill
 app.post('/api/rooms/checkout', async (req, res) => {
     const { room_id, final_payment_method } = req.body;
     try {
@@ -311,7 +311,6 @@ app.post('/api/rooms/checkout', async (req, res) => {
 
         const itemsDetail = JSON.stringify(orders || []);
 
-        // Lưu vào lịch sử hóa đơn (Không chứa booking_type để tránh lỗi)
         await supabase.from('bills').insert([{
             created_date: new Date().toISOString().split('T')[0],
             room_name: room.room_name,
@@ -326,7 +325,6 @@ app.post('/api/rooms/checkout', async (req, res) => {
             items_detail: itemsDetail
         }]);
 
-        // Cập nhật phòng về trạng thái trống
         await supabase.from('rooms').update({
             status: 'Trống',
             customer_name: null,
@@ -337,7 +335,6 @@ app.post('/api/rooms/checkout', async (req, res) => {
             payment_status: 'Chưa thanh toán'
         }).eq('id', room_id);
 
-        // Xóa dịch vụ đã thanh toán
         await supabase.from('orders').delete().eq('room_id', room_id);
 
         res.json({
@@ -394,10 +391,10 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/', async (req, res) => {
     try {
-        const { data: solutions } = await supabase.from('solutions').select('*').order('id', { ascending: false });
-        res.render('index', { solutions: solutions || [] });
+        const { data: rooms } = await supabase.from('rooms').select('*');
+        res.render('index', { rooms: rooms || [] });
     } catch (err) {
-        res.render('index', { solutions: [] });
+        res.render('index', { rooms: [] });
     }
 });
 
@@ -432,12 +429,10 @@ app.get('/logout', (req, res) => {
 app.get('/admin', async (req, res) => {
     if (!req.session.user) return res.redirect('/login');
     try {
-        const { data: solutions } = await supabase.from('solutions').select('*').order('id', { ascending: false });
         const { data: users } = await supabase.from('users').select('id, username, role');
 
         res.render('admin', { 
             user: req.session.user, 
-            solutions: solutions || [], 
             users: users || []
         });
     } catch (err) {
