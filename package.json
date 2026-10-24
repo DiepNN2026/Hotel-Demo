@@ -7,11 +7,12 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "exceljs": "^4.4.0",
-    "express": "^4.19.2",
-    "express-session": "^1.18.0",
-    "pg": "^8.11.3",
-    "xlsx": "^0.18.5"
-  }
+  "@supabase/supabase-js": "^2.39.0",
+  "cors": "^2.8.5",
+  "exceljs": "^4.4.0",
+  "express": "^4.19.2",
+  "express-session": "^1.18.0",
+  "pg": "^8.11.3",
+  "xlsx": "^0.18.5"
+}
 }
