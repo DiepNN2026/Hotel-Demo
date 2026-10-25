@@ -1,6 +1,6 @@
 const express = require('express');
 const session = require('express-session');
-const { createClient } = require('@supabase/supabase-js');
+const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
 const bcrypt = require('bcrypt');
@@ -8,11 +8,11 @@ const bcrypt = require('bcrypt');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CẤU HÌNH SUPABASE TRỰC TIẾP
-const SUPABASE_URL = 'https://irmjdaxejjxutvkxgwig.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_VvitTFe26BJnWm4dqdHr7g_eL6Z6Snt';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// CẤU HÌNH KẾT NỐI POSTGRESQL (SUPABASE PORT 6543)
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres.irmjdaxejjxutvkxgwig:Mật_Khẩu_Của_Bạn@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres',
+    ssl: { rejectUnauthorized: false } // Bắt buộc đối với Supabase cloud
+});
 
 // Cấu hình lưu trữ ảnh upload tạm thời
 const storage = multer.diskStorage({
@@ -38,25 +38,20 @@ app.use(session({
 // Tự động khởi tạo hoặc cập nhật tài khoản quản trị admin / 123456
 async function initAdmin() {
     try {
-        const { data: adminUser } = await supabase
-            .from('users')
-            .select('*')
-            .eq('username', 'admin')
-            .single();
+        const client = await pool.connect();
+        const resUser = await client.query('SELECT * FROM users WHERE username = $1', ['admin']);
+        const adminUser = resUser.rows[0];
 
         const hashedPassword = await bcrypt.hash('123456', 10);
 
         if (!adminUser) {
-            await supabase.from('users').insert([
-                { username: 'admin', password: hashedPassword, role: 'admin' }
-            ]);
+            await client.query('INSERT INTO users (username, password, role) VALUES ($1, $2, $3)', ['admin', hashedPassword, 'admin']);
             console.log('Đã tạo tài khoản admin mặc định mới (mật khẩu: 123456).');
         } else {
-            await supabase.from('users')
-                .update({ password: hashedPassword, role: 'admin' })
-                .eq('username', 'admin');
+            await client.query('UPDATE users SET password = $1, role = $2 WHERE username = $3', [hashedPassword, 'admin', 'admin']);
             console.log('Đã cập nhật mật khẩu tài khoản admin thành: 123456');
         }
+        client.release();
     } catch (err) {
         console.log('Đang chờ kết nối cơ sở dữ liệu Supabase...', err.message);
     }
@@ -68,9 +63,8 @@ initAdmin();
 // Lấy cài đặt khách sạn
 app.get('/api/settings', async (req, res) => {
     try {
-        const { data, error } = await supabase.from('settings').select('*').limit(1).single();
-        if (error || !data) return res.json({});
-        res.json(data);
+        const result = await pool.query('SELECT * FROM settings LIMIT 1');
+        res.json(result.rows[0] || {});
     } catch (e) {
         res.json({});
     }
@@ -80,16 +74,22 @@ app.get('/api/settings', async (req, res) => {
 app.post('/api/settings', async (req, res) => {
     const { name, address, phone, qr_code, promo_text, promo_discount, banners } = req.body;
     try {
-        const { data: existing } = await supabase.from('settings').select('id').limit(1).single();
-        const payload = {
-            name, address, phone, qr_code, promo_text, promo_discount,
-            banners: JSON.stringify(banners || [])
-        };
-        if (existing) {
-            await supabase.from('settings').update(payload).eq('id', existing.id);
+        const client = await pool.connect();
+        const existing = await client.query('SELECT id FROM settings LIMIT 1');
+        const bannersJson = JSON.stringify(banners || []);
+
+        if (existing.rows.length > 0) {
+            await client.query(
+                `UPDATE settings SET name = $1, address = $2, phone = $3, qr_code = $4, promo_text = $5, promo_discount = $6, banners = $7 WHERE id = $8`,
+                [name, address, phone, qr_code, promo_text, promo_discount, bannersJson, existing.rows[0].id]
+            );
         } else {
-            await supabase.from('settings').insert([payload]);
+            await client.query(
+                `INSERT INTO settings (name, address, phone, qr_code, promo_text, promo_discount, banners) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [name, address, phone, qr_code, promo_text, promo_discount, bannersJson]
+            );
         }
+        client.release();
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -99,9 +99,8 @@ app.post('/api/settings', async (req, res) => {
 // Lấy danh sách phòng
 app.get('/api/rooms', async (req, res) => {
     try {
-        const { data, error } = await supabase.from('rooms').select('*').order('id', { ascending: true });
-        if (error) throw error;
-        const formatted = (data || []).map(r => ({
+        const result = await pool.query('SELECT * FROM rooms ORDER BY id ASC');
+        const formatted = (result.rows || []).map(r => ({
             ...r,
             booking_dates_arr: r.booking_dates ? JSON.parse(r.booking_dates) : []
         }));
@@ -116,9 +115,9 @@ app.post('/api/rooms/save', async (req, res) => {
     const { id, room_name, price_per_night } = req.body;
     try {
         if (id) {
-            await supabase.from('rooms').update({ room_name, price_per_night }).eq('id', id);
+            await pool.query('UPDATE rooms SET room_name = $1, price_per_night = $2 WHERE id = $3', [room_name, price_per_night, id]);
         } else {
-            await supabase.from('rooms').insert([{ room_name, price_per_night, status: 'Trống' }]);
+            await pool.query('INSERT INTO rooms (room_name, price_per_night, status) VALUES ($1, $2, $3)', [room_name, price_per_night, 'Trống']);
         }
         res.json({ success: true });
     } catch (e) {
@@ -129,233 +128,72 @@ app.post('/api/rooms/save', async (req, res) => {
 // Xóa phòng
 app.delete('/api/rooms/:id', async (req, res) => {
     try {
-        await supabase.from('rooms').delete().eq('id', req.params.id);
+        await pool.query('DELETE FROM rooms WHERE id = $1', [req.params.id]);
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// Đặt phòng (Online / Tại quầy)
-app.post('/api/rooms/book', async (req, res) => {
-    const { room_id, booking_type, customer_name, customer_phone, customer_cccd, booking_dates, payment_status, payment_method } = req.body;
+// ================= API ĐỌC TOÀN BỘ DỮ LIỆU CŨ (BILLS, USERS, MENU, ORDERS) =================
+
+// 1. Lấy lịch sử tất cả các hóa đơn cũ (Bảng bills)
+app.get('/api/bills', async (req, res) => {
     try {
-        const { data: room } = await supabase.from('rooms').select('*').eq('id', room_id).single();
-        if (!room) return res.status(404).json({ error: 'Không tìm thấy phòng' });
+        const result = await pool.query('SELECT * FROM bills ORDER BY id DESC');
+        const formattedBills = (result.rows || []).map(bill => ({
+            ...bill,
+            items_detail: typeof bill.items_detail === 'string' ? JSON.parse(bill.items_detail) : bill.items_detail
+        }));
+        res.json(formattedBills);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
-        const nights = booking_dates && booking_dates.length > 0 ? booking_dates.length : 1;
-        const status = booking_type === 'online' ? 'Chờ xác thực' : 'Đang có khách';
+// 2. Lấy thống kê tổng quan doanh thu cũ
+app.get('/api/statistics/revenue', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT grand_total, created_date FROM bills');
+        let totalRevenue = 0;
+        const revenueByDate = {};
 
-        const { data: setting } = await supabase.from('settings').select('*').limit(1).single();
-        const promoDiscount = setting ? Number(setting.promo_discount || 0) : 0;
-
-        const roomTotal = room.price_per_night * nights;
-        const discountAmount = Math.round((roomTotal * promoDiscount) / 100);
-        const grandTotal = roomTotal - discountAmount;
-
-        await supabase.from('rooms').update({
-            status,
-            booking_type,
-            customer_name,
-            customer_phone,
-            customer_cccd,
-            booking_dates: JSON.stringify(booking_dates || []),
-            nights,
-            payment_status,
-            payment_method
-        }).eq('id', room_id);
+        (result.rows || []).forEach(bill => {
+            const amount = Number(bill.grand_total) || 0;
+            totalRevenue += amount;
+            
+            const date = bill.created_date || 'Khác';
+            if (!revenueByDate[date]) {
+                revenueByDate[date] = 0;
+            }
+            revenueByDate[date] += amount;
+        });
 
         res.json({
-            success: true,
-            preliminaryBill: {
-                room_name: room.room_name,
-                nights,
-                customer_name,
-                customer_phone,
-                customer_cccd,
-                roomTotal,
-                discountAmount,
-                grandTotal
-            }
+            totalRevenue,
+            totalBills: result.rows.length,
+            revenueByDate
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// Xác thực đơn đặt phòng (Chờ xác thực -> Đã duyệt / Từ chối)
-app.post('/api/rooms/verify', async (req, res) => {
-    const { room_id, action } = req.body;
-    try {
-        if (action === 'approve') {
-            await supabase.from('rooms').update({
-                status: 'Đang có khách',
-                payment_status: 'Đã thanh toán'
-            }).eq('id', room_id);
-        } else {
-            await supabase.from('rooms').update({
-                status: 'Trống',
-                customer_name: null,
-                customer_phone: null,
-                customer_cccd: null,
-                booking_dates: null,
-                nights: 0,
-                payment_status: 'Chưa thanh toán'
-            }).eq('id', room_id);
-        }
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Cập nhật trạng thái thanh toán phòng
-app.post('/api/rooms/update-status', async (req, res) => {
-    const { room_id, payment_status, payment_method } = req.body;
-    try {
-        await supabase.from('rooms').update({ payment_status, payment_method }).eq('id', room_id);
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Hủy đặt phòng
-app.post('/api/rooms/cancel-booking', async (req, res) => {
-    const { room_id } = req.body;
-    try {
-        await supabase.from('rooms').update({
-            status: 'Trống',
-            customer_name: null,
-            customer_phone: null,
-            customer_cccd: null,
-            booking_dates: null,
-            nights: 0,
-            payment_status: 'Chưa thanh toán'
-        }).eq('id', room_id);
-        await supabase.from('orders').delete().eq('room_id', room_id);
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Lấy danh sách dịch vụ đã đặt của phòng
-app.get('/api/orders/:room_id', async (req, res) => {
-    try {
-        const { data, error } = await supabase.from('orders').select('*').eq('room_id', req.params.room_id);
-        if (error) throw error;
-        res.json(data || []);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Lấy bảng giá menu dịch vụ
+// 3. Lấy thực đơn (Bảng menu)
 app.get('/api/menu', async (req, res) => {
     try {
-        const { data, error } = await supabase.from('menu').select('*');
-        if (error) throw error;
-        res.json(data || []);
+        const result = await pool.query('SELECT * FROM menu ORDER BY id ASC');
+        res.json(result.rows || []);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
 
-// Thêm dịch vụ cho phòng
-app.post('/api/orders', async (req, res) => {
-    const { room_id, item_id, quantity } = req.body;
+// 4. Lấy danh sách dịch vụ đặt phòng (Bảng orders)
+app.get('/api/orders/:room_id', async (req, res) => {
     try {
-        const { data: menuItem } = await supabase.from('menu').select('*').eq('id', item_id).single();
-        if (!menuItem) return res.status(404).json({ error: 'Món không tồn tại' });
-
-        const qty = Number(quantity) || 1;
-        const total_price = menuItem.price * qty;
-
-        await supabase.from('orders').insert([{
-            room_id,
-            item_name: menuItem.item_name,
-            category: menuItem.category,
-            unit: menuItem.unit,
-            quantity: qty,
-            total_price
-        }]);
-
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// Checkout Phòng & In Bill
-app.post('/api/rooms/checkout', async (req, res) => {
-    const { room_id, final_payment_method } = req.body;
-    try {
-        const { data: room } = await supabase.from('rooms').select('*').eq('id', room_id).single();
-        if (!room) return res.status(404).json({ error: 'Phòng không tồn tại' });
-
-        const { data: setting } = await supabase.from('settings').select('*').limit(1).single();
-        const { data: orders } = await supabase.from('orders').select('*').eq('room_id', room_id);
-
-        const nights = room.nights || 1;
-        const isAlreadyPaidRoom = room.payment_status === 'Đã thanh toán';
-        const roomTotal = isAlreadyPaidRoom ? 0 : (room.price_per_night * nights);
-
-        const foodItems = (orders || []).filter(o => o.category === 'food');
-        const drinkItems = (orders || []).filter(o => o.category === 'drink');
-        const relaxItems = (orders || []).filter(o => o.category === 'relax');
-        const otherItems = (orders || []).filter(o => o.category === 'khác' || !o.category);
-
-        const serviceTotal = (orders || []).reduce((sum, o) => sum + (o.total_price || 0), 0);
-        const grandTotal = roomTotal + serviceTotal;
-
-        const itemsDetail = JSON.stringify(orders || []);
-
-        await supabase.from('bills').insert([{
-            created_date: new Date().toISOString().split('T')[0],
-            room_name: room.room_name,
-            customer_name: room.customer_name,
-            customer_phone: room.customer_phone,
-            customer_cccd: room.customer_cccd,
-            nights,
-            discount: 0,
-            room_total: roomTotal,
-            grand_total: grandTotal,
-            payment_method: final_payment_method,
-            items_detail: itemsDetail
-        }]);
-
-        await supabase.from('rooms').update({
-            status: 'Trống',
-            customer_name: null,
-            customer_phone: null,
-            customer_cccd: null,
-            booking_dates: null,
-            nights: 0,
-            payment_status: 'Chưa thanh toán'
-        }).eq('id', room_id);
-
-        await supabase.from('orders').delete().eq('room_id', room_id);
-
-        res.json({
-            success: true,
-            setting: setting || {},
-            report: {
-                room_name: room.room_name,
-                nights,
-                customer_name: room.customer_name,
-                customer_phone: room.customer_phone,
-                customer_cccd: room.customer_cccd,
-                isAlreadyPaidRoom,
-                roomTotal,
-                grandTotal,
-                discountAmount: 0,
-                foodItems,
-                drinkItems,
-                relaxItems,
-                otherItems
-            }
-        });
+        const result = await pool.query('SELECT * FROM orders WHERE room_id = $1', [req.params.room_id]);
+        res.json(result.rows || []);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -365,13 +203,10 @@ app.post('/api/rooms/checkout', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        const { data: user, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('username', username)
-            .single();
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result.rows[0];
 
-        if (error || !user) {
+        if (!user) {
             return res.status(400).json({ error: 'Tài khoản hoặc mật khẩu không đúng!' });
         }
 
@@ -391,8 +226,8 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/', async (req, res) => {
     try {
-        const { data: rooms } = await supabase.from('rooms').select('*');
-        res.render('index', { rooms: rooms || [] });
+        const result = await pool.query('SELECT * FROM rooms');
+        res.render('index', { rooms: result.rows || [] });
     } catch (err) {
         res.render('index', { rooms: [] });
     }
@@ -405,7 +240,8 @@ app.get('/login', (req, res) => {
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        const { data: user } = await supabase.from('users').select('*').eq('username', username).single();
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = result.rows[0];
         if (!user) return res.render('login', { error: 'Tên đăng nhập hoặc mật khẩu không đúng!' });
 
         const match = await bcrypt.compare(password, user.password);
@@ -429,11 +265,10 @@ app.get('/logout', (req, res) => {
 app.get('/admin', async (req, res) => {
     if (!req.session.user) return res.redirect('/login');
     try {
-        const { data: users } = await supabase.from('users').select('id, username, role');
-
+        const result = await pool.query('SELECT id, username, role FROM users');
         res.render('admin', { 
             user: req.session.user, 
-            users: users || []
+            users: result.rows || []
         });
     } catch (err) {
         res.status(500).send("Lỗi tải trang quản trị");
